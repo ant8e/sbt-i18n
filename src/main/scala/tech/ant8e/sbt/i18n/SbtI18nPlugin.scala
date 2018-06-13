@@ -12,9 +12,9 @@ object SbtI18nPlugin extends AutoPlugin {
 
   object autoImport {
     val i18nBundlePackageSetting =
-      settingKey[String]("Package name for the i18n bundle ")
+      settingKey[String]("Package name for the i18n bundle.")
     val generateI18NBundleTask =
-      taskKey[Seq[File]]("A task that is automatically imported to the build")
+      taskKey[Seq[File]]("The i18n bundle generation task.")
 
   }
 
