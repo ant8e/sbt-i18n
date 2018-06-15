@@ -12,6 +12,7 @@ object Main {
 
   val constant = 1
   def function = 2*constant
+//  val b = org.example.i18n.Bundle
 
   def main(args: Array[String]): Unit = {
     println(new Main().default)
