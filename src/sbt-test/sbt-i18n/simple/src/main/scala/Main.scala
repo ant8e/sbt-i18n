@@ -6,6 +6,7 @@ package simple
 class Main {
   val default = "the function returned"
   def method = default + " " + Main.function
+  val text = org.example.i18n.Bundle.fr.test
 }
 
 object Main {
