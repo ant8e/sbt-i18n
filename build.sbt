@@ -1,6 +1,6 @@
 name := "sbt-i18n"
 organization := "tech.ant8e"
-version := "0.1"
+version := "0.2-SNAPSHOT"
 licenses += "Apache 2.0 License" -> url("http://www.apache.org/licenses/LICENSE-2.0.html")
 startYear := Some(2018)
 
