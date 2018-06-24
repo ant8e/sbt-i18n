@@ -51,9 +51,9 @@ object SbtI18nPlugin extends AutoPlugin {
           Failure(new RuntimeException(s"i18n parsing failed for $f", e))
       }.toOption
 
-    streams.log.info(s"Generating i18n bundle in package $packageName.")
-    val inputs = srcDir.allPaths
-    streams.log.debug(s"Found ${inputs.get.size} template files in $srcDir.")
+    val inputs = srcDir.allPaths.get
+    if (inputs.nonEmpty) streams.log.info(s"Generating i18n bundle in package $packageName.")
+    streams.log.debug(s"Found ${inputs.size} template files in $srcDir.")
     val bundleFile = outDir / "Bundle.scala"
 
     val configs = (inputs ** "*").pair(parseSourceFile, errorIfNone = false)
