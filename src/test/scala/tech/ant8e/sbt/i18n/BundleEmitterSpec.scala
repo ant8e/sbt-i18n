@@ -3,7 +3,7 @@ package tech.ant8e.sbt.i18n
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{FlatSpec, Matchers}
 
-import scala.language.experimental.macros
+import scala.collection.SortedSet
 
 class BundleEmitterSpec extends FlatSpec with Matchers {
   private val packageName = "org.example.i18n"
@@ -67,7 +67,7 @@ class BundleEmitterSpec extends FlatSpec with Matchers {
       """
         |fr {
         |    text = Bonjour
-        |
+        |    text3 = "Mon paramètre est {0}"
         |    topic {
         |      key1 = Salade
         |    }
@@ -82,10 +82,13 @@ class BundleEmitterSpec extends FlatSpec with Matchers {
     val config = ConfigFactory.parseString(configString.stripMargin)
     BundleEmitter(config, packageName).buildTree() should be(
       new Root(
-        Set(
-          Branch("topic", Set(Message("key1", Map("fr" -> "Salade")))),
-          Message("text", Map("fr"  -> "Bonjour", "de" -> "Guttentag")),
-          Message("text2", Map("de" -> "ich heiße MARVIN"))
+        SortedSet(
+          Branch("topic", SortedSet(SimpleMessage("key1", Map("fr" -> "Salade")))),
+          SimpleMessage("text", Map("fr"  -> "Bonjour", "de" -> "Guttentag")),
+          SimpleMessage("text2", Map("de" -> "ich heiße MARVIN")),
+          ParametrizedMessage("text3",
+                              Map("fr" -> "Mon paramètre est {0}"),
+                              List(Param.StringParam))
         )
       ))
   }
@@ -95,7 +98,7 @@ class BundleEmitterSpec extends FlatSpec with Matchers {
       """
         |fr {
         |    text = Bonjour
-        |
+        |    text3 = "Mon paramètre est {0}"
         |    topic {
         |      key1 = Salade
         |    }
@@ -107,18 +110,21 @@ class BundleEmitterSpec extends FlatSpec with Matchers {
         |}
         |""".stripMargin
 
-    val config = ConfigFactory.parseString(configString.stripMargin)
-    BundleEmitter(config, packageName).emitStructure() should be("""abstract class I18N {
+    val expected =
+      """abstract class I18N {
+        |def text: String
+        |def text2: String
+        |def text3(x0: String): String
         |abstract class Topic {
         |def key1: String
         |}
         |
         |def topic: Topic
         |
-        |def text: String
-        |def text2: String
-        |}""".stripMargin)
+        |}""".stripMargin
 
+    val config = ConfigFactory.parseString(configString.stripMargin)
+    BundleEmitter(config, packageName).emitStructure() should be(expected)
   }
   it must "emit the values" in {
     import BundleEmitter.quote
@@ -126,7 +132,7 @@ class BundleEmitterSpec extends FlatSpec with Matchers {
       """
         |fr {
         |    text = Bonjour
-        |
+        |    text3 = "Mon paramètre est {0}"
         |    topic {
         |      key1 = Salade
         |    }
@@ -139,22 +145,26 @@ class BundleEmitterSpec extends FlatSpec with Matchers {
         |""".stripMargin
 
     val config = ConfigFactory.parseString(configString.stripMargin)
-    BundleEmitter(config, packageName).emitValues("fr") should be(s"""object fr extends I18N {
-        |object topic extends  Topic {
-        |val key1= ${quote("Salade")}
-        |}
-        |
-        |val text= ${quote("Bonjour")}
-        |val text2= ${quote("??? fr.text2 ???")}
+    BundleEmitter(config, packageName).emitValues("fr") should be(
+      s"""object fr extends I18N {
+         |val text= ${quote("Bonjour")}
+         |val text2= ${quote("??? fr.text2 ???")}
+         |def text3(x0: String): String= java.text.MessageFormat.format(${quote(
+           "Mon paramètre est {0}")}, x0)
+         |object topic extends  Topic {
+         |val key1= ${quote("Salade")}
+         |}
+         |
         |}""".stripMargin)
 
     BundleEmitter(config, packageName).emitValues("de") should be(s"""object de extends I18N {
-        |object topic extends  Topic {
-        |val key1= ${quote("??? de.topic.key1 ???")}
-        |}
-        |
-        |val text= ${quote("1")}
-        |val text2= ${quote("ich heiße MARVIN")}
+         |val text= ${quote("1")}
+         |val text2= ${quote("ich heiße MARVIN")}
+         |def text3(x0: String): String= java.text.MessageFormat.format(${quote("??? de.text3 ???")}, x0)
+         |object topic extends  Topic {
+         |val key1= ${quote("??? de.topic.key1 ???")}
+         |}
+         |
         |}""".stripMargin)
 
   }

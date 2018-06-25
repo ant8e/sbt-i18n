@@ -1,10 +1,15 @@
 package tech.ant8e.sbt.i18n
 
+import java.text.{DateFormat, Format, MessageFormat, NumberFormat}
+
 import com.typesafe.config.{Config, ConfigUtil}
+import tech.ant8e.sbt.i18n.BundleEmitter.Param._
 import tech.ant8e.sbt.i18n.BundleEmitter._
 
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
+import scala.collection.SortedSet
+import scala.util.Try
 case class BundleEmitter(config: Config, packageName: String) {
 
   val languages =
@@ -36,14 +41,31 @@ case class BundleEmitter(config: Config, packageName: String) {
       .map(_.getKey)
       .toSet
 
+  private def toScalaType(paramType: ParamType) = paramType match {
+    case StringParam => "String"
+    case DateParam   => "java.util.Data"
+    case DoubleParam => "Double"
+    case LongParam   => "Long "
+  }
+
   private[i18n] def emitStructure(): String = {
 
-    def emitKeyDef(key: String) = s"def ${ScalaIdentifier.asIdentifier(key)}: String"
+    def emitKeySimpleDef(key: String) = s"def ${ScalaIdentifier.asIdentifier(key)}: String"
+    def emitKeyParamDef(key: String, paramTypes: List[ParamType]) = {
+
+      val params = paramTypes.zipWithIndex
+        .map { case (ptype, index) => s"x$index: ${toScalaType(ptype)}" }
+        .mkString(",")
+
+      s"def ${ScalaIdentifier.asIdentifier(key)}($params): String"
+    }
+
     //@tailrec
     def emit_(t: Branch): String =
-      t.children
+      t.children.toList // ensure the generated string are in the order of the orig set
         .map {
-          case Message(key, _) => emitKeyDef(key)
+          case SimpleMessage(key, _)                   => emitKeySimpleDef(key)
+          case ParametrizedMessage(key, _, paramsType) => emitKeyParamDef(key, paramsType)
           case b @ Branch(key, _) =>
             s"""abstract class ${ScalaIdentifier.asIdentifier(key.capitalize)} {
              |${emit_(b)}
@@ -63,14 +85,30 @@ case class BundleEmitter(config: Config, packageName: String) {
 
   private[i18n] def emitValues(lang: String): String = {
 
-    def emitKeyVal(key: String, value: String) =
+    def emitSimpleKeyVal(key: String, value: String) =
       s"val ${ScalaIdentifier.asIdentifier(key)}= ${quote(value)}"
+
+    def emitKeyParamDef(key: String, value: String, paramTypes: List[ParamType]) = {
+
+      val params = paramTypes.zipWithIndex
+        .map { case (ptype, index) => s"x$index: ${toScalaType(ptype)}" }
+        .mkString(",")
+      val paramsApplication = paramTypes.zipWithIndex
+        .map { case (ptype, index) => s"x$index" }
+        .mkString(",")
+
+      s"def ${ScalaIdentifier.asIdentifier(key)}($params): String= java.text.MessageFormat.format(${quote(
+        value)}, $paramsApplication)"
+    }
+
     //@tailrec
     def emit_(t: Branch, path: String): String =
-      t.children
+      t.children.toList // ensure the generated string are in the order of the orig set
         .map {
-          case Message(key, messages) =>
-            emitKeyVal(key, messages.getOrElse(lang, s"??? $path.$key ???"))
+          case SimpleMessage(key, messages) =>
+            emitSimpleKeyVal(key, messages.getOrElse(lang, s"??? $path.$key ???"))
+          case ParametrizedMessage(key, messages, paramsType) =>
+            emitKeyParamDef(key, messages.getOrElse(lang, s"??? $path.$key ???"), paramsType)
           case b @ Branch(key, _) =>
             s"""object ${ScalaIdentifier.asIdentifier(key)} extends  ${ScalaIdentifier.asIdentifier(
                  key.capitalize)} {
@@ -88,8 +126,8 @@ case class BundleEmitter(config: Config, packageName: String) {
 
   private[i18n] def buildTree() =
     languages.foldRight(new Root()) {
-      case (lang, tree) =>
-        config.getConfig(lang).entrySet().asScala.foldRight(tree) {
+      case (lang, t) =>
+        config.getConfig(lang).entrySet().asScala.foldRight(t) {
           case (entry, langTree) =>
             updateTree(langTree,
                        lang,
@@ -105,15 +143,30 @@ case class BundleEmitter(config: Config, packageName: String) {
     def updateTree_(t: Branch, subPath: List[String]): Branch = (t, subPath) match {
 
       case (b @ Branch(_, children), head :: Nil) =>
-        val subChild = children.find(_.key == head).getOrElse(Message(head, Map.empty))
+        val params = BundleEmitter.Param.identifyParams(rawValue)
+
+        if (params.isLeft) {
+          // TODO reportError
+        }
+
+        val paramTypes = params.getOrElse(List.empty)
+        val subChild = children
+          .find(_.key == head)
+          .getOrElse(
+            if (paramTypes.isEmpty)
+              SimpleMessage(head, Map.empty)
+            else
+              ParametrizedMessage(head, Map.empty, paramTypes))
         val newSub = subChild match {
-          case m: Message => m.copy(messages = m.messages + (lang -> rawValue))
-          case _          => subChild // TODO mergeError
+          case m: SimpleMessage       => m.copy(messages = m.messages + (lang -> rawValue))
+          case m: ParametrizedMessage => m.copy(messages = m.messages + (lang -> rawValue))
+          case _                      => subChild // TODO mergeError
         }
         b.copy(children = b.children - subChild + newSub)
 
       case (cb @ Branch(_, children), head :: tail) =>
-        val subChild = children.find(_.key == head).getOrElse(Branch(head, Set.empty))
+        import Node.nodeOrdering
+        val subChild = children.find(_.key == head).getOrElse(Branch(head, SortedSet.empty[Node]))
         val t = subChild match {
           case b: Branch => updateTree_(b, tail)
           case _         => subChild // TODO mergeError
@@ -128,22 +181,57 @@ case class BundleEmitter(config: Config, packageName: String) {
   }
 }
 
-object BundleEmitter {
-  private[i18n] def pathKeys(c: Set[String]): Set[String] =
+private[i18n] object BundleEmitter {
+  def pathKeys(c: Set[String]): Set[String] =
     c.map(path => ConfigUtil.splitPath(path).asScala)
       .collect { case p if p.length > 1 => ConfigUtil.joinPath(p.init.asJava) }
 
-  private[i18n] def splitKeys(c: Set[String]): (Set[String], Set[String]) =
+  def splitKeys(c: Set[String]): (Set[String], Set[String]) =
     c.partition(k => ConfigUtil.splitPath(k).asScala.length > 1)
 
-  private[i18n] val ___root__ = "___root___"
+  val ___root__ = "___root___"
   sealed abstract class Node(val key: String)
-  class Root(override val children: Set[Node] = Set.empty)                    extends Branch(___root__, children)
-  case class Branch(override val key: String, children: Set[Node])            extends Node(key)
-  case class Message(override val key: String, messages: Map[String, String]) extends Node(key)
+  object Node {
+    implicit val nodeOrdering: Ordering[Node] = Ordering.by[Node, String](_.key)
+  }
+  class Root(override val children: SortedSet[Node] = SortedSet.empty[Node])
+      extends Branch(___root__, children)
+  case class Branch(override val key: String, children: SortedSet[Node]) extends Node(key)
+  case class SimpleMessage(override val key: String, messages: Map[String, String])
+      extends Node(key)
+  case class ParametrizedMessage(override val key: String,
+                                 messages: Map[String, String],
+                                 paramsType: List[Param.ParamType])
+      extends Node(key)
 
-  private[i18n] def quote(s: String) = {
+  def quote(s: String) = {
     val q = """""""""
     s"$q$s$q"
   }
+
+  object Param {
+
+    sealed trait ParamType
+    case object StringParam extends ParamType
+    case object DateParam   extends ParamType
+    case object DoubleParam extends ParamType
+    case object LongParam   extends ParamType
+
+    def identifyParams(s: String): Either[Throwable, List[ParamType]] =
+      Try {
+        new MessageFormat(s).getFormatsByArgumentIndex.toList
+          .map(javaTextFormatToParamType)
+
+      }.toEither
+
+    private def javaTextFormatToParamType(format: Format) =
+      format match {
+        case null                                    => StringParam
+        case _: DateFormat                           => DateParam
+        case x: NumberFormat if x.isParseIntegerOnly => LongParam
+        case _: NumberFormat                         => DoubleParam
+        case _                                       => StringParam
+      }
+  }
+
 }

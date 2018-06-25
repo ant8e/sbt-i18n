@@ -4,18 +4,15 @@ package simple
   * A simple class and objects to write tests against.
   */
 class Main {
-  val default = "the function returned"
-  def method = default + " " + Main.function
   val text = org.example.i18n.Bundle.fr.test
+  val text2 = org.example.i18n.Bundle.fr.test2("hi")
 }
 
 object Main {
 
-  val constant = 1
-  def function = 2*constant
-//  val b = org.example.i18n.Bundle
-
   def main(args: Array[String]): Unit = {
-    println(new Main().default)
+    val m = new Main()
+    println(m.text)
+    println(m.text2)
   }
 }
