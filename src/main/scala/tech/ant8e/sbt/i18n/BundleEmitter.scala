@@ -6,7 +6,6 @@ import com.typesafe.config.{Config, ConfigUtil}
 import tech.ant8e.sbt.i18n.BundleEmitter.Param._
 import tech.ant8e.sbt.i18n.BundleEmitter._
 
-import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.collection.SortedSet
 import scala.util.Try
@@ -60,7 +59,6 @@ case class BundleEmitter(config: Config, packageName: String) {
       s"def ${ScalaIdentifier.asIdentifier(key)}($params): String"
     }
 
-    //@tailrec
     def emit_(t: Branch): String =
       t.children.toList // ensure the generated string are in the order of the orig set
         .map {
@@ -94,14 +92,13 @@ case class BundleEmitter(config: Config, packageName: String) {
         .map { case (ptype, index) => s"x$index: ${toScalaType(ptype)}" }
         .mkString(",")
       val paramsApplication = paramTypes.zipWithIndex
-        .map { case (ptype, index) => s"x$index" }
+        .map { case (_, index) => s"x$index" }
         .mkString(",")
 
       s"def ${ScalaIdentifier.asIdentifier(key)}($params): String= java.text.MessageFormat.format(${quote(
         value)}, $paramsApplication)"
     }
 
-    //@tailrec
     def emit_(t: Branch, path: String): String =
       t.children.toList // ensure the generated string are in the order of the orig set
         .map {

@@ -14,7 +14,7 @@ object SbtI18nPlugin extends AutoPlugin {
   override def requires = JvmPlugin
 
   object autoImport {
-    val i18nBundlePackageSetting =
+    val i18nBundlePackageName =
       settingKey[String]("Package name for the i18n bundle.")
     val generateI18NBundleTask =
       taskKey[Seq[File]]("The i18n bundle generation task.")
@@ -33,11 +33,11 @@ object SbtI18nPlugin extends AutoPlugin {
           generateI18NBundleTask := generateFromSource(streams.value,
                                                        i18nSource.value,
                                                        sourceManaged.value / "sbt-i18n",
-                                                       i18nBundlePackageSetting.value),
+                                                       i18nBundlePackageName.value),
           mappings in packageSrc ++= managedSources.value pair (Path
             .relativeTo(sourceManaged.value) | Path.flat),
           sourceGenerators += generateI18NBundleTask.taskValue
-        )) ++ Seq(i18nBundlePackageSetting := "org.example.i18n")
+        )) ++ Seq(i18nBundlePackageName := "org.example.i18n")
 
   def generateFromSource(streams: TaskStreams,
                          srcDir: sbt.File,

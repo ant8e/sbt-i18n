@@ -4,8 +4,8 @@ package simple
   * A simple class and objects to write tests against.
   */
 class Main {
-  val text = org.example.i18n.Bundle.fr.test
-  val text2 = org.example.i18n.Bundle.fr.test2("hi")
+  val text = tech.ant8e.i18n.Bundle.fr.test
+  val text2 = tech.ant8e.i18n.Bundle.fr.test2("hi")
 }
 
 object Main {
