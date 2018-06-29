@@ -49,7 +49,7 @@ This plugin requires sbt 1.0.0+.
 Add the following to `project/plugins.sbt:`
 
     resolvers += Resolver.bintrayIvyRepo("antoinecomte", "sbt-plugins")
-    addSbtPlugin("tech.ant8e" % "sbt-i18n" % "0.1-6-gc10e12e")
+    addSbtPlugin("tech.ant8e" % "sbt-i18n" % "0.2")
 
 Write a config file in `src/main/i18n/xxx.conf`.
 
