@@ -42,7 +42,7 @@ case class BundleEmitter(config: Config, packageName: String) {
 
   private def toScalaType(paramType: ParamType) = paramType match {
     case StringParam => "String"
-    case DateParam   => "java.util.Data"
+    case DateParam   => "java.util.Date"
     case DoubleParam => "Double"
     case LongParam   => "Long "
   }
