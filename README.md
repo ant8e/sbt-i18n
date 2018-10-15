@@ -15,6 +15,9 @@ A configuration file like this
 en = {
   key1 = a text
   key2 ="a parametrized text {0}"
+  subsection {
+    key3 = some text
+  }
 }
 
 ```
@@ -27,12 +30,22 @@ object Bundle {
   abstract class I18N {
     def key1: String
     def key2(x0: String): String
+    
+    abstract class Subsection {
+      def key4: String
+    }
+    
+    def subsection: Subsection
   }
 
   object en extends I18N {
     val key1 = """a text"""
     def key2(x0: String): String = java.text.MessageFormat.format("""a parametrized text {0}""", x0)
-  }
+   
+    object subsection  extends Subsection {
+       val key4= """2"""
+    }
+}
 }
      
 ```
