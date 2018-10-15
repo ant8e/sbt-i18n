@@ -15,6 +15,7 @@ bintrayVcsUrl := Some("git@github.com:ant8e/sbt-i18n.git")
 
 initialCommands in console := """import tech.ant8e.sbt.i18n._"""
 
+enablePlugins(SbtPlugin)
 // set up 'scripted; sbt plugin for testing sbt plugins
 scriptedLaunchOpts ++=
   Seq("-Xmx1024M", "-Dplugin.version=" + version.value)
