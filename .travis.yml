@@ -2,18 +2,13 @@ language: scala
 
 jdk:
   - oraclejdk8
+  - openjdk8
 
 script:
   ## runs both regular tests and sbt-scripted integration tests
   - sbt -Dfile.encoding=UTF8 test scripted
 
 sudo: false
-
-# https://docs.travis-ci.com/user/languages/java/
-addons:
-  apt:
-    packages:
-      - oracle-java8-installer
 
 before_cache:
   # Cleanup the cached directories to avoid unnecessary cache updates
