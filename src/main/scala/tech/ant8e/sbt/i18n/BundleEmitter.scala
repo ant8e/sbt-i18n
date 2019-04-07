@@ -147,6 +147,7 @@ case class BundleEmitter(config: Config, packageName: String) {
         }
 
         val paramTypes = params.getOrElse(List.empty)
+
         val subChild = children
           .find(_.key == head)
           .getOrElse(
@@ -154,6 +155,7 @@ case class BundleEmitter(config: Config, packageName: String) {
               SimpleMessage(head, Map.empty)
             else
               ParametrizedMessage(head, Map.empty, paramTypes))
+
         val newSub = subChild match {
           case m: SimpleMessage       => m.copy(messages = m.messages + (lang -> rawValue))
           case m: ParametrizedMessage => m.copy(messages = m.messages + (lang -> rawValue))
@@ -168,7 +170,7 @@ case class BundleEmitter(config: Config, packageName: String) {
           case b: Branch => updateTree_(b, tail)
           case _         => subChild // TODO mergeError
         }
-        cb.copy(children = cb.children + t)
+        cb.copy(children = cb.children - subChild + t)
 
       case _ => t
     }
@@ -187,19 +189,22 @@ private[i18n] object BundleEmitter {
     c.partition(k => ConfigUtil.splitPath(k).asScala.length > 1)
 
   val ___root__ = "___root___"
-  sealed abstract class Node(val key: String)
+
+  sealed abstract class Node {
+    def key: String
+  }
   object Node {
     implicit val nodeOrdering: Ordering[Node] = Ordering.by[Node, String](_.key)
   }
+
   class Root(override val children: SortedSet[Node] = SortedSet.empty[Node])
       extends Branch(___root__, children)
-  case class Branch(override val key: String, children: SortedSet[Node]) extends Node(key)
-  case class SimpleMessage(override val key: String, messages: Map[String, String])
-      extends Node(key)
-  case class ParametrizedMessage(override val key: String,
+  case class Branch(key: String, children: SortedSet[Node])            extends Node
+  case class SimpleMessage(key: String, messages: Map[String, String]) extends Node
+  case class ParametrizedMessage(key: String,
                                  messages: Map[String, String],
                                  paramsType: List[Param.ParamType])
-      extends Node(key)
+      extends Node
 
   def quote(s: String) = {
     val q = """""""""

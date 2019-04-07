@@ -80,17 +80,18 @@ class BundleEmitterSpec extends FlatSpec with Matchers {
         |""".stripMargin
     import BundleEmitter._
     val config = ConfigFactory.parseString(configString.stripMargin)
-    BundleEmitter(config, packageName).buildTree() should be(
-      new Root(
-        SortedSet(
-          Branch("topic", SortedSet(SimpleMessage("key1", Map("fr" -> "Salade")))),
-          SimpleMessage("text", Map("fr"  -> "Bonjour", "de" -> "Guttentag")),
-          SimpleMessage("text2", Map("de" -> "ich heiße MARVIN")),
-          ParametrizedMessage("text3",
-                              Map("fr" -> "Mon paramètre est {0}"),
-                              List(Param.StringParam))
-        )
-      ))
+    val root   = BundleEmitter(config, packageName).buildTree()
+    val expected = new Root(
+      SortedSet(
+        Branch("topic",
+               SortedSet(SimpleMessage("key1", Map("fr" -> "Salade")),
+                         SimpleMessage("key2", Map("fr" -> "Légumes")))),
+        SimpleMessage("text", Map("fr"        -> "Bonjour", "de" -> "Guttentag")),
+        SimpleMessage("text2", Map("de"       -> "ich heiße MARVIN")),
+        ParametrizedMessage("text3", Map("fr" -> "Mon paramètre est {0}"), List(Param.StringParam))
+      )
+    )
+    root should be(expected)
   }
 
   it must "emit the structure" in {
@@ -136,11 +137,15 @@ class BundleEmitterSpec extends FlatSpec with Matchers {
         |    topic {
         |      key1 = Salade
         |    }
+        |    topic.key2 = Légumes
         |}
         |
         |de {
         |    text  = 1
         |    text2 = ich heiße MARVIN
+        |    topic {
+        |      key1 = Salat
+        |    }
         |}
         |""".stripMargin
 
@@ -153,16 +158,19 @@ class BundleEmitterSpec extends FlatSpec with Matchers {
            "Mon paramètre est {0}")}, x0)
          |object topic extends  Topic {
          |val key1= ${quote("Salade")}
+         |val key2= ${quote("Légumes")}
          |}
          |
         |}""".stripMargin)
 
-    BundleEmitter(config, packageName).emitValues("de") should be(s"""object de extends I18N {
+    val emitter: BundleEmitter = BundleEmitter(config, packageName)
+    emitter.emitValues("de") should be(s"""object de extends I18N {
          |val text= ${quote("1")}
          |val text2= ${quote("ich heiße MARVIN")}
          |def text3(x0: String): String= java.text.MessageFormat.format(${quote("??? de.text3 ???")}, x0)
          |object topic extends  Topic {
-         |val key1= ${quote("??? de.topic.key1 ???")}
+         |val key1= ${quote("Salat")}
+         |val key2= ${quote("??? de.topic.key2 ???")}
          |}
          |
         |}""".stripMargin)
