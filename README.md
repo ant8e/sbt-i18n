@@ -61,7 +61,7 @@ This plugin requires sbt 1.0.0+.
 
 Add the following to `project/plugins.sbt:`
 
-    addSbtPlugin("tech.ant8e" % "sbt-i18n" % "0.2")
+    addSbtPlugin("tech.ant8e" % "sbt-i18n" % "0.3")
 
 Write a config file in `src/main/i18n/xxx.conf`.
 
