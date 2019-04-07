@@ -45,7 +45,7 @@ object SbtI18nPlugin extends AutoPlugin {
                          packageName: String): Seq[File] = {
 
     def parseSourceFile(f: File) =
-      Try { ConfigFactory.parseFile(f) }.recoverWith {
+      Try { ConfigFactory.parseFile(f).resolve() }.recoverWith {
         case e =>
           streams.log.err(s"Unable to parse  $f: ${e.getMessage}")
           Failure(new RuntimeException(s"i18n parsing failed for $f", e))
