@@ -7,7 +7,6 @@ import tech.ant8e.sbt.i18n.BundleEmitter.Param._
 import tech.ant8e.sbt.i18n.BundleEmitter._
 
 import scala.collection.JavaConverters._
-import scala.collection.SortedSet
 import scala.util.Try
 case class BundleEmitter(config: Config, packageName: String) {
 
@@ -60,7 +59,8 @@ case class BundleEmitter(config: Config, packageName: String) {
     }
 
     def emit_(t: Branch): String =
-      t.children.toList // ensure the generated string are in the order of the orig set
+      t.children.toList
+        .sortBy(_.key) // ensure the generated string are in the order of the orig set
         .map {
           case SimpleMessage(key, _)                   => emitKeySimpleDef(key)
           case ParametrizedMessage(key, _, paramsType) => emitKeyParamDef(key, paramsType)
@@ -100,7 +100,8 @@ case class BundleEmitter(config: Config, packageName: String) {
     }
 
     def emit_(t: Branch, path: String): String =
-      t.children.toList // ensure the generated string are in the order of the orig set
+      t.children.toList
+        .sortBy(_.key) // ensure the generated string are in the order of the orig set
         .map {
           case SimpleMessage(key, messages) =>
             emitSimpleKeyVal(key, messages.getOrElse(lang, s"??? $path.$key ???"))
@@ -164,8 +165,7 @@ case class BundleEmitter(config: Config, packageName: String) {
         b.copy(children = b.children - subChild + newSub)
 
       case (cb @ Branch(_, children), head :: tail) =>
-        import Node.nodeOrdering
-        val subChild = children.find(_.key == head).getOrElse(Branch(head, SortedSet.empty[Node]))
+        val subChild = children.find(_.key == head).getOrElse(Branch(head, Set.empty[Node]))
         val t = subChild match {
           case b: Branch => updateTree_(b, tail)
           case _         => subChild // TODO mergeError
@@ -193,13 +193,9 @@ private[i18n] object BundleEmitter {
   sealed abstract class Node {
     def key: String
   }
-  object Node {
-    implicit val nodeOrdering: Ordering[Node] = Ordering.by[Node, String](_.key)
-  }
 
-  class Root(override val children: SortedSet[Node] = SortedSet.empty[Node])
-      extends Branch(___root__, children)
-  case class Branch(key: String, children: SortedSet[Node])            extends Node
+  class Root(override val children: Set[Node] = Set.empty[Node])       extends Branch(___root__, children)
+  case class Branch(key: String, children: Set[Node])                  extends Node
   case class SimpleMessage(key: String, messages: Map[String, String]) extends Node
   case class ParametrizedMessage(key: String,
                                  messages: Map[String, String],

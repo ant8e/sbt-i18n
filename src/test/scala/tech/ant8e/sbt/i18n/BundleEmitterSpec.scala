@@ -71,6 +71,7 @@ class BundleEmitterSpec extends FlatSpec with Matchers {
         |    topic {
         |      key1 = Salade
         |    }
+        |    topic.key2 = Légumes
         |}
         |
         |de {
@@ -82,15 +83,16 @@ class BundleEmitterSpec extends FlatSpec with Matchers {
     val config = ConfigFactory.parseString(configString.stripMargin)
     val root   = BundleEmitter(config, packageName).buildTree()
     val expected = new Root(
-      SortedSet(
+      Set(
         Branch("topic",
-               SortedSet(SimpleMessage("key1", Map("fr" -> "Salade")),
-                         SimpleMessage("key2", Map("fr" -> "Légumes")))),
+               Set(SimpleMessage("key1", Map("fr" -> "Salade")),
+                   SimpleMessage("key2", Map("fr" -> "Légumes")))),
         SimpleMessage("text", Map("fr"        -> "Bonjour", "de" -> "Guttentag")),
         SimpleMessage("text2", Map("de"       -> "ich heiße MARVIN")),
         ParametrizedMessage("text3", Map("fr" -> "Mon paramètre est {0}"), List(Param.StringParam))
       )
     )
+
     root should be(expected)
   }
 
