@@ -1,8 +1,8 @@
 language: scala
 
 jdk:
-  - oraclejdk8
   - openjdk8
+  - openjdk11
 
 script:
   ## runs both regular tests and sbt-scripted integration tests
