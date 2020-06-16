@@ -6,11 +6,12 @@ object ScalaIdentifier {
 
   val plainIdTest = "\\p{Alpha}(\\p{Alnum}|_)*".r
 
-  def asIdentifier(s: String): String = s match {
-    case plainIdTest(_*) if !scalaKeywords.contains(s) => s
-    case ""                                            => ""
-    case _                                             => s"`$s`"
-  }
+  def asIdentifier(s: String): String =
+    s match {
+      case plainIdTest(_*) if !scalaKeywords.contains(s) => s
+      case ""                                            => ""
+      case _                                             => s"`$s`"
+    }
 
   val scalaKeywords = Seq(
     "abstract",

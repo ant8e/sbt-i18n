@@ -39,12 +39,13 @@ case class BundleEmitter(config: Config, packageName: String) {
       .map(_.getKey)
       .toSet
 
-  private def toScalaType(paramType: ParamType) = paramType match {
-    case StringParam => "String"
-    case DateParam   => "java.util.Date"
-    case DoubleParam => "Double"
-    case LongParam   => "Long "
-  }
+  private def toScalaType(paramType: ParamType) =
+    paramType match {
+      case StringParam => "String"
+      case DateParam   => "java.util.Date"
+      case DoubleParam => "Double"
+      case LongParam   => "Long "
+    }
 
   private[i18n] def emitStructure(): String = {
 
@@ -64,13 +65,14 @@ case class BundleEmitter(config: Config, packageName: String) {
         .map {
           case SimpleMessage(key, _)                   => emitKeySimpleDef(key)
           case ParametrizedMessage(key, _, paramsType) => emitKeyParamDef(key, paramsType)
-          case b @ Branch(key, _) =>
+          case b @ Branch(key, _)                      =>
             s"""abstract class ${ScalaIdentifier.asIdentifier(key.capitalize)} {
              |${emit_(b)}
              |}
              |
              |def ${ScalaIdentifier.asIdentifier(key)}: ${ScalaIdentifier.asIdentifier(
-                 key.capitalize)}
+              key.capitalize
+            )}
              |""".stripMargin
         }
         .mkString("\n")
@@ -88,28 +90,28 @@ case class BundleEmitter(config: Config, packageName: String) {
 
     def emitKeyParamDef(key: String, value: String, paramTypes: List[ParamType]) = {
 
-      val params = paramTypes.zipWithIndex
+      val params            = paramTypes.zipWithIndex
         .map { case (ptype, index) => s"x$index: ${toScalaType(ptype)}" }
         .mkString(",")
       val paramsApplication = paramTypes.zipWithIndex
         .map { case (_, index) => s"x$index" }
         .mkString(",")
 
-      s"def ${ScalaIdentifier.asIdentifier(key)}($params): String= java.text.MessageFormat.format(${quote(
-        value)}, $paramsApplication)"
+      s"def ${ScalaIdentifier.asIdentifier(key)}($params): String= java.text.MessageFormat.format(${quote(value)}, $paramsApplication)"
     }
 
     def emit_(t: Branch, path: String): String =
       t.children.toList
         .sortBy(_.key) // ensure the generated string are in the order of the orig set
         .map {
-          case SimpleMessage(key, messages) =>
+          case SimpleMessage(key, messages)                   =>
             emitSimpleKeyVal(key, messages.getOrElse(lang, s"??? $path.$key ???"))
           case ParametrizedMessage(key, messages, paramsType) =>
             emitKeyParamDef(key, messages.getOrElse(lang, s"??? $path.$key ???"), paramsType)
-          case b @ Branch(key, _) =>
+          case b @ Branch(key, _)                             =>
             s"""object ${ScalaIdentifier.asIdentifier(key)} extends  ${ScalaIdentifier.asIdentifier(
-                 key.capitalize)} {
+              key.capitalize
+            )} {
              |${emit_(b, s"$path.$key")}
              |}
              |""".stripMargin
@@ -127,53 +129,59 @@ case class BundleEmitter(config: Config, packageName: String) {
       case (lang, t) =>
         config.getConfig(lang).entrySet().asScala.foldRight(t) {
           case (entry, langTree) =>
-            updateTree(langTree,
-                       lang,
-                       entry.getValue.unwrapped().toString,
-                       ConfigUtil.splitPath(entry.getKey).asScala.toList)
+            updateTree(
+              langTree,
+              lang,
+              entry.getValue.unwrapped().toString,
+              ConfigUtil.splitPath(entry.getKey).asScala.toList
+            )
         }
     }
 
-  private[i18n] def updateTree(tree: Root,
-                               lang: String,
-                               rawValue: String,
-                               path: List[String]): Root = {
-    def updateTree_(t: Branch, subPath: List[String]): Branch = (t, subPath) match {
+  private[i18n] def updateTree(
+      tree: Root,
+      lang: String,
+      rawValue: String,
+      path: List[String]
+  ): Root = {
+    def updateTree_(t: Branch, subPath: List[String]): Branch =
+      (t, subPath) match {
 
-      case (b @ Branch(_, children), head :: Nil) =>
-        val params = BundleEmitter.Param.identifyParams(rawValue)
+        case (b @ Branch(_, children), head :: Nil)   =>
+          val params = BundleEmitter.Param.identifyParams(rawValue)
 
-        if (params.isLeft) {
-          // TODO reportError
-        }
+          if (params.isLeft) {
+            // TODO reportError
+          }
 
-        val paramTypes = params.getOrElse(List.empty)
+          val paramTypes = params.getOrElse(List.empty)
 
-        val subChild = children
-          .find(_.key == head)
-          .getOrElse(
-            if (paramTypes.isEmpty)
-              SimpleMessage(head, Map.empty)
-            else
-              ParametrizedMessage(head, Map.empty, paramTypes))
+          val subChild = children
+            .find(_.key == head)
+            .getOrElse(
+              if (paramTypes.isEmpty)
+                SimpleMessage(head, Map.empty)
+              else
+                ParametrizedMessage(head, Map.empty, paramTypes)
+            )
 
-        val newSub = subChild match {
-          case m: SimpleMessage       => m.copy(messages = m.messages + (lang -> rawValue))
-          case m: ParametrizedMessage => m.copy(messages = m.messages + (lang -> rawValue))
-          case _                      => subChild // TODO mergeError
-        }
-        b.copy(children = b.children - subChild + newSub)
+          val newSub = subChild match {
+            case m: SimpleMessage       => m.copy(messages = m.messages + (lang -> rawValue))
+            case m: ParametrizedMessage => m.copy(messages = m.messages + (lang -> rawValue))
+            case _                      => subChild // TODO mergeError
+          }
+          b.copy(children = b.children - subChild + newSub)
 
-      case (cb @ Branch(_, children), head :: tail) =>
-        val subChild = children.find(_.key == head).getOrElse(Branch(head, Set.empty[Node]))
-        val t = subChild match {
-          case b: Branch => updateTree_(b, tail)
-          case _         => subChild // TODO mergeError
-        }
-        cb.copy(children = cb.children - subChild + t)
+        case (cb @ Branch(_, children), head :: tail) =>
+          val subChild = children.find(_.key == head).getOrElse(Branch(head, Set.empty[Node]))
+          val t        = subChild match {
+            case b: Branch => updateTree_(b, tail)
+            case _         => subChild // TODO mergeError
+          }
+          cb.copy(children = cb.children - subChild + t)
 
-      case _ => t
-    }
+        case _                                        => t
+      }
 
     new Root(updateTree_(tree, path).children)
 
@@ -181,7 +189,7 @@ case class BundleEmitter(config: Config, packageName: String) {
 }
 
 private[i18n] object BundleEmitter {
-  def pathKeys(c: Set[String]): Set[String] =
+  def pathKeys(c: Set[String]): Set[String]                 =
     c.map(path => ConfigUtil.splitPath(path).asScala)
       .collect { case p if p.length > 1 => ConfigUtil.joinPath(p.init.asJava) }
 
@@ -197,10 +205,11 @@ private[i18n] object BundleEmitter {
   class Root(override val children: Set[Node] = Set.empty[Node])       extends Branch(___root__, children)
   case class Branch(key: String, children: Set[Node])                  extends Node
   case class SimpleMessage(key: String, messages: Map[String, String]) extends Node
-  case class ParametrizedMessage(key: String,
-                                 messages: Map[String, String],
-                                 paramsType: List[Param.ParamType])
-      extends Node
+  case class ParametrizedMessage(
+      key: String,
+      messages: Map[String, String],
+      paramsType: List[Param.ParamType]
+  ) extends Node
 
   def quote(s: String) = {
     val q = """""""""

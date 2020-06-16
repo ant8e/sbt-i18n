@@ -1,11 +1,10 @@
 package tech.ant8e.sbt.i18n
 
 import com.typesafe.config.ConfigFactory
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-import scala.collection.SortedSet
-
-class BundleEmitterSpec extends FlatSpec with Matchers {
+class BundleEmitterSpec extends AnyFlatSpec with Matchers {
   private val packageName = "org.example.i18n"
 
   "A Bundle Emitter" should "emit the correct package" in {
@@ -49,7 +48,7 @@ class BundleEmitterSpec extends FlatSpec with Matchers {
       |    text2 = ich heiße MARVIN
       |}
       |""".stripMargin
-    val config = ConfigFactory.parseString(configString.stripMargin)
+    val config       = ConfigFactory.parseString(configString.stripMargin)
     BundleEmitter(config, packageName).translationKeys should be(Set("text", "topic.key1", "text2"))
   }
 
@@ -59,7 +58,8 @@ class BundleEmitterSpec extends FlatSpec with Matchers {
 
   it should "split the keys" in {
     BundleEmitter.splitKeys(Set("text", "topic.key1", "text2")) should be(
-      Set("topic.key1") -> Set("text", "text2"))
+      Set("topic.key1") -> Set("text", "text2")
+    )
   }
 
   it should "build the tree" in {
@@ -80,15 +80,19 @@ class BundleEmitterSpec extends FlatSpec with Matchers {
         |}
         |""".stripMargin
     import BundleEmitter._
-    val config = ConfigFactory.parseString(configString.stripMargin)
-    val root   = BundleEmitter(config, packageName).buildTree()
-    val expected = new Root(
+    val config       = ConfigFactory.parseString(configString.stripMargin)
+    val root         = BundleEmitter(config, packageName).buildTree()
+    val expected     = new Root(
       Set(
-        Branch("topic",
-               Set(SimpleMessage("key1", Map("fr" -> "Salade")),
-                   SimpleMessage("key2", Map("fr" -> "Légumes")))),
-        SimpleMessage("text", Map("fr"        -> "Bonjour", "de" -> "Guttentag")),
-        SimpleMessage("text2", Map("de"       -> "ich heiße MARVIN")),
+        Branch(
+          "topic",
+          Set(
+            SimpleMessage("key1", Map("fr" -> "Salade")),
+            SimpleMessage("key2", Map("fr" -> "Légumes"))
+          )
+        ),
+        SimpleMessage("text", Map("fr" -> "Bonjour", "de" -> "Guttentag")),
+        SimpleMessage("text2", Map("de" -> "ich heiße MARVIN")),
         ParametrizedMessage("text3", Map("fr" -> "Mon paramètre est {0}"), List(Param.StringParam))
       )
     )
@@ -152,12 +156,12 @@ class BundleEmitterSpec extends FlatSpec with Matchers {
         |""".stripMargin
 
     val config = ConfigFactory.parseString(configString.stripMargin)
-    BundleEmitter(config, packageName).emitValues("fr") should be(
-      s"""object fr extends I18N {
+    BundleEmitter(config, packageName).emitValues("fr") should be(s"""object fr extends I18N {
          |val text= ${quote("Bonjour")}
          |val text2= ${quote("??? fr.text2 ???")}
          |def text3(x0: String): String= java.text.MessageFormat.format(${quote(
-           "Mon paramètre est {0}")}, x0)
+      "Mon paramètre est {0}"
+    )}, x0)
          |object topic extends  Topic {
          |val key1= ${quote("Salade")}
          |val key2= ${quote("Légumes")}

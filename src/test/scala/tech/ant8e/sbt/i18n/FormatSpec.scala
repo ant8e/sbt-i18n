@@ -1,9 +1,11 @@
 package tech.ant8e.sbt.i18n
 
-import org.scalatest.{EitherValues, FlatSpec, Matchers}
+import org.scalatest.EitherValues
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 import tech.ant8e.sbt.i18n.BundleEmitter.Param._
 
-class FormatSpec extends FlatSpec with Matchers with EitherValues {
+class FormatSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   "A Param parser" should "identity the correct param type " in {
     identifyParams("").right.value should be(empty)
@@ -31,9 +33,8 @@ class FormatSpec extends FlatSpec with Matchers with EitherValues {
     identifyParams("{0,time,yyyyy.MMMMM.dd GGG hh:mm aaa}").right.value should be(List(DateParam))
 
     identifyParams(
-      "{0,choice,-1#is negative| 0#is zero or fraction | 1#is one |1.0<is 1+ |2#is two |2<is more than 2.}").right.value should be(
-      List(DoubleParam))
-
+      "{0,choice,-1#is negative| 0#is zero or fraction | 1#is one |1.0<is 1+ |2#is two |2<is more than 2.}"
+    ).right.value should be(List(DoubleParam))
   }
 
   it should "not choke on invalid format" in {
