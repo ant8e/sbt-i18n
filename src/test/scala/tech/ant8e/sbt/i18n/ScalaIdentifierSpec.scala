@@ -1,8 +1,10 @@
 package tech.ant8e.sbt.i18n
 
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class ScalaIdentifierSpec extends FlatSpec with Matchers {
+class ScalaIdentifierSpec extends AnyFlatSpec with Matchers {
+
   "An Identifier" should "emit scala identifier" in {
 
     ScalaIdentifier.asIdentifier("plain") should be("plain")
@@ -12,7 +14,5 @@ class ScalaIdentifierSpec extends FlatSpec with Matchers {
     ScalaIdentifier.asIdentifier("le brie sent fort") should be("`le brie sent fort`")
     ScalaIdentifier.asIdentifier("package") should be("`package`")
     ScalaIdentifier.asIdentifier("class") should be("`class`")
-
   }
-
 }

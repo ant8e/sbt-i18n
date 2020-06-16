@@ -3,13 +3,13 @@ organization := "tech.ant8e"
 
 licenses += "Apache 2.0 License" -> url("http://www.apache.org/licenses/LICENSE-2.0.html")
 startYear := Some(2018)
-scalaVersion := "2.12.8"
+scalaVersion := "2.12.11"
 
 sbtPlugin := true
 
-libraryDependencies += "com.typesafe"  % "config"     % "1.3.3"
-libraryDependencies += "org.scalactic" %% "scalactic" % "3.0.5" % "test"
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
+libraryDependencies += "com.typesafe"   % "config"    % "1.4.0"
+libraryDependencies += "org.scalactic" %% "scalactic" % "3.1.2" % "test"
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.1.2" % "test"
 
 bintrayPackageLabels := Seq("sbt", "plugin")
 bintrayVcsUrl := Some("git@github.com:ant8e/sbt-i18n.git")
