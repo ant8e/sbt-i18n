@@ -209,7 +209,7 @@ private[i18n] object BundleEmitter {
       key: String,
       messages: Map[String, String],
       paramsType: List[Param.ParamType]
-  ) extends Node
+  )                                                                    extends Node
 
   def quote(s: String) = {
     val q = """""""""
