@@ -9,7 +9,7 @@ sbtPlugin := true
 
 libraryDependencies += "com.typesafe"   % "config"    % "1.4.0"
 libraryDependencies += "org.scalactic" %% "scalactic" % "3.1.2" % "test"
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.1.2" % "test"
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.0" % "test"
 
 bintrayPackageLabels := Seq("sbt", "plugin")
 bintrayVcsUrl := Some("git@github.com:ant8e/sbt-i18n.git")
