@@ -18,8 +18,8 @@ case class BundleEmitter(config: Config, packageName: String) {
       .toSet
 
   val translationKeys =
-    languages.foldRight(Set.empty[String]) {
-      case (lang, acc) => acc ++ translationKeysOf(config.getConfig(lang))
+    languages.foldRight(Set.empty[String]) { case (lang, acc) =>
+      acc ++ translationKeysOf(config.getConfig(lang))
     }
 
   val tree = buildTree()
@@ -125,17 +125,15 @@ case class BundleEmitter(config: Config, packageName: String) {
   }
 
   private[i18n] def buildTree() =
-    languages.foldRight(new Root()) {
-      case (lang, t) =>
-        config.getConfig(lang).entrySet().asScala.foldRight(t) {
-          case (entry, langTree) =>
-            updateTree(
-              langTree,
-              lang,
-              entry.getValue.unwrapped().toString,
-              ConfigUtil.splitPath(entry.getKey).asScala.toList
-            )
-        }
+    languages.foldRight(new Root()) { case (lang, t) =>
+      config.getConfig(lang).entrySet().asScala.foldRight(t) { case (entry, langTree) =>
+        updateTree(
+          langTree,
+          lang,
+          entry.getValue.unwrapped().toString,
+          ConfigUtil.splitPath(entry.getKey).asScala.toList
+        )
+      }
     }
 
   private[i18n] def updateTree(
@@ -147,7 +145,7 @@ case class BundleEmitter(config: Config, packageName: String) {
     def updateTree_(t: Branch, subPath: List[String]): Branch =
       (t, subPath) match {
 
-        case (b @ Branch(_, children), head :: Nil)   =>
+        case (b @ Branch(_, children), head :: Nil) =>
           val params = BundleEmitter.Param.identifyParams(rawValue)
 
           if (params.isLeft) {
@@ -180,7 +178,7 @@ case class BundleEmitter(config: Config, packageName: String) {
           }
           cb.copy(children = cb.children - subChild + t)
 
-        case _                                        => t
+        case _ => t
       }
 
     new Root(updateTree_(tree, path).children)
