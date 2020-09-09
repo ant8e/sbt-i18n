@@ -50,10 +50,9 @@ object SbtI18nPlugin extends AutoPlugin {
   ): Seq[File] = {
 
     def parseSourceFile(f: File) =
-      Try(ConfigFactory.parseFile(f).resolve()).recoverWith {
-        case e =>
-          streams.log.err(s"Unable to parse  $f: ${e.getMessage}")
-          Failure(new RuntimeException(s"i18n parsing failed for $f", e))
+      Try(ConfigFactory.parseFile(f).resolve()).recoverWith { case e =>
+        streams.log.err(s"Unable to parse  $f: ${e.getMessage}")
+        Failure(new RuntimeException(s"i18n parsing failed for $f", e))
       }.toOption
 
     val inputs     = srcDir.allPaths.get
@@ -64,8 +63,8 @@ object SbtI18nPlugin extends AutoPlugin {
     val configs    = (inputs ** "*").pair(parseSourceFile, errorIfNone = false)
     val fullConfig =
       configs
-        .foldLeft(ConfigFactory.empty()) {
-          case (acc, (_, config)) => acc.withFallback(config)
+        .foldLeft(ConfigFactory.empty()) { case (acc, (_, config)) =>
+          acc.withFallback(config)
         }
 
     IO.write(bundleFile, BundleEmitter(fullConfig, packageName).emit())
