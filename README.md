@@ -125,7 +125,9 @@ being a number format will lead to a `Double`.  By default (when no format is sp
 ## Missing keys
 
 The structure of a bundle is a merge of all the keys of all the languages. Should a key not be defined in a specific 
-language, it will be generated as `??? [key] ???`.      
+language, it will be generated as `??? [key] ???`.
+      
+In oder to break generation on missing key set `i18nBreakOnMissingKeys := true` in `build.sbt`. 
 
 ## Contribution policy ##
 

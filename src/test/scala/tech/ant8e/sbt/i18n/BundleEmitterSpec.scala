@@ -182,4 +182,26 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
         |}""".stripMargin)
 
   }
+  it must "break emit the values when breakOnMissingKeys=true" in {
+    val configString =
+      """
+        |fr {
+        |    topic {
+        |      key1 = Salade
+        |    }
+        |}
+        |
+        |de {
+        |    topic {
+        |    }
+        |}
+        |""".stripMargin
+
+    val config = ConfigFactory.parseString(configString.stripMargin)
+    val caught =
+      intercept[Exception] {
+        BundleEmitter(config, packageName, breakOnMissingKeys = true).emit()
+      }
+    caught.getMessage shouldBe "There's missing value for 'de.topic.key1'"
+  }
 }
