@@ -18,6 +18,8 @@ object SbtI18nPlugin extends AutoPlugin {
       settingKey[String]("Package name for the i18n bundle.")
     val generateI18NBundleTask =
       taskKey[Seq[File]]("The i18n bundle generation task.")
+    val i18nBreakOnMissingKeys =
+      settingKey[Boolean]("Option to break generation task on missing keys in configuration.")
 
   }
 
@@ -34,19 +36,21 @@ object SbtI18nPlugin extends AutoPlugin {
             streams.value,
             i18nSource.value,
             sourceManaged.value / "sbt-i18n",
-            i18nBundlePackageName.value
+            i18nBundlePackageName.value,
+            i18nBreakOnMissingKeys.value
           ),
           mappings in packageSrc ++= managedSources.value pair (Path
             .relativeTo(sourceManaged.value) | Path.flat),
           sourceGenerators += generateI18NBundleTask.taskValue
         )
-    ) ++ Seq(i18nBundlePackageName := "org.example.i18n")
+    ) ++ Seq(i18nBundlePackageName := "org.example.i18n", i18nBreakOnMissingKeys := false)
 
   def generateFromSource(
       streams: TaskStreams,
       srcDir: sbt.File,
       outDir: File,
-      packageName: String
+      packageName: String,
+      breakOnMissingKeys: Boolean
   ): Seq[File] = {
 
     def parseSourceFile(f: File) =
@@ -67,7 +71,7 @@ object SbtI18nPlugin extends AutoPlugin {
           acc.withFallback(config)
         }
 
-    IO.write(bundleFile, BundleEmitter(fullConfig, packageName).emit())
+    IO.write(bundleFile, BundleEmitter(fullConfig, packageName, breakOnMissingKeys).emit())
     Seq(bundleFile)
   }
 

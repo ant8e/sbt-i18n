@@ -8,7 +8,7 @@ import tech.ant8e.sbt.i18n.BundleEmitter._
 
 import scala.collection.JavaConverters._
 import scala.util.Try
-case class BundleEmitter(config: Config, packageName: String) {
+case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys: Boolean = false) {
 
   val languages =
     config
@@ -105,18 +105,31 @@ case class BundleEmitter(config: Config, packageName: String) {
         .sortBy(_.key) // ensure the generated string are in the order of the orig set
         .map {
           case SimpleMessage(key, messages)                   =>
-            emitSimpleKeyVal(key, messages.getOrElse(lang, s"??? $path.$key ???"))
+            emitSimpleKeyVal(
+              key,
+              messages.getOrElse(lang, defaultIfAllowed(s"$path.$key", s"??? $path.$key ???"))
+            )
           case ParametrizedMessage(key, messages, paramsType) =>
-            emitKeyParamDef(key, messages.getOrElse(lang, s"??? $path.$key ???"), paramsType)
+            emitKeyParamDef(
+              key,
+              messages.getOrElse(lang, defaultIfAllowed(s"$path.$key", s"??? $path.$key ???")),
+              paramsType
+            )
           case b @ Branch(key, _)                             =>
-            s"""object ${ScalaIdentifier.asIdentifier(key)} extends  ${ScalaIdentifier.asIdentifier(
-              key.capitalize
-            )} {
-             |${emit_(b, s"$path.$key")}
-             |}
-             |""".stripMargin
+            s"""object ${ScalaIdentifier.asIdentifier(key)} extends  ${ScalaIdentifier
+              .asIdentifier(key.capitalize)} {
+               |${emit_(b, s"$path.$key")}
+               |}
+               |""".stripMargin
         }
         .mkString("\n")
+
+    def defaultIfAllowed(fullKey: String, default: => String): String =
+      if (!breakOnMissingKeys) {
+        default
+      } else {
+        throw new Exception(s"There's missing value for '$fullKey'")
+      }
 
     s"""object ${ScalaIdentifier.asIdentifier(lang)} extends I18N {
        |${emit_(tree, lang)}
