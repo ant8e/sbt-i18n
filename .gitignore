@@ -10,3 +10,4 @@ project/target
 .settings
 bin
 .idea/
+.bsp/
