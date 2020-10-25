@@ -7,7 +7,7 @@ scalaVersion := "2.12.11"
 
 sbtPlugin := true
 
-libraryDependencies += "com.typesafe"   % "config"    % "1.4.0"
+libraryDependencies += "com.typesafe"   % "config"    % "1.4.1"
 libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.2" % "test"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % "test"
 
