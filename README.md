@@ -1,8 +1,7 @@
 # sbt i18n
 
-[![Build Status](https://travis-ci.org/ant8e/sbt-i18n.svg?branch=master)](https://travis-ci.org/ant8e/sbt-i18n)
 [![License](http://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
-
+![example branch parameter](https://github.com/ant8e/sbt-i18n/workflows/CI/badge.svg?branch=main)
 
 
 
@@ -61,7 +60,7 @@ This plugin requires sbt 1.0.0+.
 
 Add the following to `project/plugins.sbt:`
 
-    addSbtPlugin("tech.ant8e" % "sbt-i18n" % "0.3")
+    addSbtPlugin("tech.ant8e" % "sbt-i18n" % "0.5")
 
 Write a config file in `src/main/i18n/xxx.conf`.
 
