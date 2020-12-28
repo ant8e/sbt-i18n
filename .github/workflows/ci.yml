@@ -1,0 +1,26 @@
+name: CI
+on:
+  pull_request:
+  push:
+  schedule:
+    - cron: '0 7 * * 0'
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - java: 8
+            sbt_version: "1.2.8"
+          - java: 8
+          - java: 11
+    steps:
+      - uses: actions/checkout@v1
+      - uses: olafurpg/setup-scala@v10
+        with:
+          java-version: "adopt@1.${{ matrix.java }}"
+      - uses: coursier/cache-action@v5
+      - run: sbt -v -Dfile.encoding=UTF8 -J-XX:ReservedCodeCacheSize=256M $(if [[ "${{matrix.sbt_version}}" != "" ]] ; then echo "^^${{matrix.sbt_version}}" ; fi) test scripted
+      - run: rm -rf "$HOME/.ivy2/local"
+      - run: rm -rf "$HOME/.ivy2/cache/tech.ant8e"
