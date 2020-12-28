@@ -28,6 +28,7 @@ case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys
     s"""package $packageName
        |
        |object Bundle {
+       | ${emitMap()}
        | ${emitStructure()}
        | ${languages.map(emitValues).mkString("\n")}
        |}
@@ -82,6 +83,11 @@ case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys
        |}""".stripMargin
 
   }
+
+  private[i18n] def emitMap(): String =
+    "val languages: Map[String, I18N] = Map(" + languages
+      .map(language => s"""("$language", $language)""")
+      .mkString(", ") + ")"
 
   private[i18n] def emitValues(lang: String): String = {
 

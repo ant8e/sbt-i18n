@@ -1,0 +1,6 @@
+# the task should exists
+> show generateI18NBundleTask
+
+> compile
+
+$ absent target/scala-2.12/src_managed/main/sbt-i18n/Bundle.scala
