@@ -71,8 +71,11 @@ object SbtI18nPlugin extends AutoPlugin {
           acc.withFallback(config)
         }
 
-    IO.write(bundleFile, BundleEmitter(fullConfig, packageName, breakOnMissingKeys).emit())
-    Seq(bundleFile)
+    if (!fullConfig.isEmpty) {
+      IO.write(bundleFile, BundleEmitter(fullConfig, packageName, breakOnMissingKeys).emit())
+      Seq(bundleFile)
+    } else
+      Seq.empty
   }
 
   private def watchSourceSettings =

@@ -32,6 +32,27 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
     BundleEmitter(config, packageName).languages should be(Set("fr", "de"))
   }
 
+  it must "emit the languages map" in {
+    val configString =
+      """
+      |fr {
+      |    text = Bonjour
+      |}
+      |de {
+      |    text = Guttentag
+      |}
+      |""".stripMargin
+
+    val config   = ConfigFactory.parseString(configString)
+    val expected =
+      """package """.stripMargin + packageName + """
+         |
+         |object Bundle {
+         | val languages: Map[String, I18N] = Map(("de", de), ("fr", fr))""".stripMargin
+
+    BundleEmitter(config, packageName).emit() should startWith(expected)
+  }
+
   it must "identify all the translations keys" in {
     val configString =
       """
