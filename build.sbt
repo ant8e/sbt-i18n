@@ -3,7 +3,7 @@ organization := "tech.ant8e"
 
 licenses += "Apache 2.0 License" -> url("http://www.apache.org/licenses/LICENSE-2.0.html")
 startYear := Some(2018)
-scalaVersion := "2.12.11"
+scalaVersion := "2.12.13"
 
 sbtPlugin := true
 
