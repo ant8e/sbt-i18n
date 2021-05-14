@@ -8,7 +8,7 @@ scalaVersion := "2.12.11"
 sbtPlugin := true
 
 libraryDependencies += "com.typesafe"   % "config"    % "1.4.1"
-libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.7" % "test"
+libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.9" % "test"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.6" % "test"
 
 bintrayPackageLabels := Seq("sbt", "plugin")
