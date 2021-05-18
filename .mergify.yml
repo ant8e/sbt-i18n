@@ -1,7 +1,11 @@
 pull_request_rules:
-  - name: Automatic merge on approval
+  - name: Automatic merge on scala-steward
     conditions:
-      - "#approved-reviews-by>=1"
+      - author=scala-steward
+      - check-success=CI / test (8, 1.2.8) (pull_request)
+      - check-success=CI / test (8) (pull_request)
+      - check-success=CI / test (11) (pull_request)
     actions:
       merge:
         method: merge
+        strict: true
