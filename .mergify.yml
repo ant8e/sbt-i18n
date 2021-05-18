@@ -1,5 +1,5 @@
 pull_request_rules:
-  - name: Automatic merge on scala-steward
+  - name: Automatic merge of scala-steward PR
     conditions:
       - author=scala-steward
       - check-success=CI / test (8, 1.2.8) (pull_request)
