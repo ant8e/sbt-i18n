@@ -31,7 +31,7 @@ object SbtI18nPlugin extends AutoPlugin {
     inConfig(Compile)(
       watchSourceSettings ++
         Seq(
-          i18nSource := sourceDirectory.value / "i18n",
+          i18nSource             := sourceDirectory.value / "i18n",
           generateI18NBundleTask := generateFromSource(
             streams.value,
             i18nSource.value,
