@@ -3,12 +3,12 @@ organization := "tech.ant8e"
 
 licenses += "Apache 2.0 License" -> url("http://www.apache.org/licenses/LICENSE-2.0.html")
 startYear                        := Some(2018)
-scalaVersion                     := "2.13.6"
+scalaVersion                     := "2.12.15"
 
 sbtPlugin := true
 
 libraryDependencies += "com.typesafe"   % "config"    % "1.4.1"
-libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.7" % "test"
+libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.10" % "test"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.9" % "test"
 
 bintrayPackageLabels := Seq("sbt", "plugin")
