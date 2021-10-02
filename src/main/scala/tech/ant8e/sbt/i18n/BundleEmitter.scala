@@ -24,7 +24,7 @@ case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys
 
   val tree = buildTree()
 
-  def emit(): String                                          =
+  def emit(): String =
     s"""package $packageName
        |
        |object Bundle {
@@ -40,7 +40,7 @@ case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys
       .map(_.getKey)
       .toSet
 
-  private def toScalaType(paramType: ParamType)               =
+  private def toScalaType(paramType: ParamType) =
     paramType match {
       case StringParam => "String"
       case DateParam   => "java.util.Date"
@@ -48,7 +48,7 @@ case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys
       case LongParam   => "Long "
     }
 
-  private[i18n] def emitStructure(): String                   = {
+  private[i18n] def emitStructure(): String = {
 
     def emitKeySimpleDef(key: String)                             = s"def ${ScalaIdentifier.asIdentifier(key)}: String"
     def emitKeyParamDef(key: String, paramTypes: List[ParamType]) = {
@@ -84,7 +84,7 @@ case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys
 
   }
 
-  private[i18n] def emitMap(): String                =
+  private[i18n] def emitMap(): String =
     "val languages: Map[String, I18N] = Map(" + languages
       .map(language => s"""("$language", $language)""")
       .mkString(", ") + ")"
@@ -248,7 +248,7 @@ private[i18n] object BundleEmitter {
 
       }.toEither
 
-    private def javaTextFormatToParamType(format: Format)             =
+    private def javaTextFormatToParamType(format: Format) =
       format match {
         case null                                    => StringParam
         case _: DateFormat                           => DateParam

@@ -24,7 +24,7 @@ object SbtI18nPlugin extends AutoPlugin {
   }
 
   import autoImport._
-  private val i18nSource            =
+  private val i18nSource =
     settingKey[File]("Directory containing i18n configuration sources.")
 
   override lazy val projectSettings =
@@ -78,7 +78,7 @@ object SbtI18nPlugin extends AutoPlugin {
       Seq.empty
   }
 
-  private def watchSourceSettings   =
+  private def watchSourceSettings =
     Def.settings(
       Seq(
         watchSources in Defaults.ConfigGlobal += new Source(
