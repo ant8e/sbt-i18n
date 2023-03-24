@@ -41,6 +41,9 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
       |de {
       |    text = Guttentag
       |}
+      |zh-Hans {
+      |    text = 你好
+      |}
       |""".stripMargin
 
     val config   = ConfigFactory.parseString(configString)
@@ -48,7 +51,7 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
       """package """.stripMargin + packageName + """
          |
          |object Bundle {
-         | val languages: Map[String, I18N] = Map(("de", de), ("fr", fr))""".stripMargin
+         | val languages: Map[String, I18N] = Map(("de", de), ("zh-Hans", `zh-Hans`), ("fr", fr))""".stripMargin
 
     BundleEmitter(config, packageName).emit() should startWith(expected)
   }

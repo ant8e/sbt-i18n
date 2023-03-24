@@ -86,7 +86,7 @@ case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys
 
   private[i18n] def emitMap(): String =
     "val languages: Map[String, I18N] = Map(" + languages
-      .map(language => s"""("$language", $language)""")
+      .map(language => s"""("$language", ${ScalaIdentifier.asIdentifier(language)})""")
       .mkString(", ") + ")"
 
   private[i18n] def emitValues(lang: String): String = {
