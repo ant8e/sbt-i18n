@@ -41,6 +41,9 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
       |de {
       |    text = Guttentag
       |}
+      |zh-Hans {
+      |    text = 你好
+      |}
       |""".stripMargin
 
     val config   = ConfigFactory.parseString(configString)
@@ -48,7 +51,7 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
       """package """.stripMargin + packageName + """
          |
          |object Bundle {
-         | val languages: Map[String, I18N] = Map(("de", de), ("fr", fr))""".stripMargin
+         | val languages: Map[String, I18N] = Map(("de", de), ("zh-Hans", `zh-Hans`), ("fr", fr))""".stripMargin
 
     BundleEmitter(config, packageName).emit() should startWith(expected)
   }
@@ -181,8 +184,8 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
          |val text= ${quote("Bonjour")}
          |val text2= ${quote("??? fr.text2 ???")}
          |def text3(x0: String): String= java.text.MessageFormat.format(${quote(
-      "Mon paramètre est {0}"
-    )}, x0)
+                                                                      "Mon paramètre est {0}"
+                                                                    )}, x0)
          |object topic extends  Topic {
          |val key1= ${quote("Salade")}
          |val key2= ${quote("Légumes")}
@@ -194,7 +197,9 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
     emitter.emitValues("de") should be(s"""object de extends I18N {
          |val text= ${quote("1")}
          |val text2= ${quote("ich heiße MARVIN")}
-         |def text3(x0: String): String= java.text.MessageFormat.format(${quote("??? de.text3 ???")}, x0)
+         |def text3(x0: String): String= java.text.MessageFormat.format(${quote(
+                                           "??? de.text3 ???"
+                                         )}, x0)
          |object topic extends  Topic {
          |val key1= ${quote("Salat")}
          |val key2= ${quote("??? de.topic.key2 ???")}
