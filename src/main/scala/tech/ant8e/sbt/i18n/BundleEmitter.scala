@@ -72,8 +72,8 @@ case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys
              |}
              |
              |def ${ScalaIdentifier.asIdentifier(key)}: ${ScalaIdentifier.asIdentifier(
-              key.capitalize
-            )}
+                key.capitalize
+              )}
              |""".stripMargin
         }
         .mkString("\n")
@@ -86,7 +86,7 @@ case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys
 
   private[i18n] def emitMap(): String =
     "val languages: Map[String, I18N] = Map(" + languages
-      .map(language => s"""("$language", $language)""")
+      .map(language => s"""("$language", ${ScalaIdentifier.asIdentifier(language)})""")
       .mkString(", ") + ")"
 
   private[i18n] def emitValues(lang: String): String = {
@@ -123,7 +123,7 @@ case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys
             )
           case b @ Branch(key, _)                             =>
             s"""object ${ScalaIdentifier.asIdentifier(key)} extends  ${ScalaIdentifier
-              .asIdentifier(key.capitalize)} {
+                .asIdentifier(key.capitalize)} {
                |${emit_(b, s"$path.$key")}
                |}
                |""".stripMargin
