@@ -1,9 +1,42 @@
-name         := "sbt-i18n"
-organization := "tech.ant8e"
+name                 := "sbt-i18n"
+ThisBuild / organization         := "tech.ant8e"
+ThisBuild / organizationName     := "ant8e"
+ThisBuild / organizationHomepage := Some(url("https://github.com/ant8e"))
 
-licenses += "Apache 2.0 License" -> url("http://www.apache.org/licenses/LICENSE-2.0.html")
-startYear                        := Some(2018)
-scalaVersion                     := "2.12.17"
+ThisBuild / scmInfo    := Some(
+  ScmInfo(
+    url("https://github.com/ant8e/sbt-i18n"),
+    "scm:git@github.com:ant8e/sbt-i18n.git"
+  )
+)
+ThisBuild / developers := List(
+  Developer(
+    id = "ant8e",
+    name = "Antoine Comte",
+    email = "antoine@comte.cc",
+    url = url("https://github.com/ant8e/sbt-i18n")
+  )
+)
+
+ThisBuild / description := "An sbt plugin to transform your i18n bundles into Scala code."
+ThisBuild / startYear   := Some(2018)
+
+ThisBuild / licenses := List(
+  "Apache 2" -> new URL("http://www.apache.org/licenses/LICENSE-2.0.txt")
+)
+
+ThisBuild / homepage := Some(url("https://github.com/ant8e/sbt-i18n"))
+
+// Remove all additional repository other than Maven Central from POM
+ThisBuild / pomIncludeRepository := { _ => false }
+ThisBuild / publishTo            := {
+  val nexus = "https://s01.oss.sonatype.org/"
+  if (isSnapshot.value) Some("snapshots" at nexus + "content/repositories/snapshots")
+  else Some("releases" at nexus + "service/local/staging/deploy/maven2")
+}
+ThisBuild / publishMavenStyle    := true
+
+scalaVersion := "2.12.17"
 
 sbtPlugin := true
 
@@ -11,17 +44,14 @@ libraryDependencies += "com.typesafe"   % "config"    % "1.4.2"
 libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.15" % "test"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.15" % "test"
 
-bintrayPackageLabels := Seq("sbt", "plugin")
-bintrayVcsUrl        := Some("git@github.com:ant8e/sbt-i18n.git")
-
-initialCommands in console := """import tech.ant8e.sbt.i18n._"""
+console / initialCommands := """import tech.ant8e.sbt.i18n._"""
 
 enablePlugins(SbtPlugin)
 // set up 'scripted; sbt plugin for testing sbt plugins
 scriptedLaunchOpts ++=
   Seq("-Xmx1024M", "-Dplugin.version=" + version.value)
 
-scalafmtOnCompile in ThisBuild := true
+ThisBuild / scalafmtOnCompile := true
 
 enablePlugins(GitVersioning)
 git.useGitDescribe := true
