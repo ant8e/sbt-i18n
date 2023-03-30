@@ -1,4 +1,4 @@
-name                 := "sbt-i18n"
+name                             := "sbt-i18n"
 ThisBuild / organization         := "tech.ant8e"
 ThisBuild / organizationName     := "ant8e"
 ThisBuild / organizationHomepage := Some(url("https://github.com/ant8e"))
