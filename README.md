@@ -2,7 +2,7 @@
 
 [![License](http://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
 ![example branch parameter](https://github.com/ant8e/sbt-i18n/workflows/CI/badge.svg?branch=main)
-
+![Maven Central](https://img.shields.io/maven-central/v/tech.ant8e/sbt-i18n_2.12_1.0?versionPrefix=0.6)
 
 
 Sbt i18n is a very simple internationalization tools, that reads resources bundles files in properties files, json, or 
