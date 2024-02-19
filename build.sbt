@@ -41,7 +41,7 @@ scalaVersion := "2.12.18"
 sbtPlugin := true
 
 libraryDependencies += "com.typesafe"   % "config"    % "1.4.3"
-libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.17" % "test"
+libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.18" % "test"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.17" % "test"
 
 console / initialCommands := """import tech.ant8e.sbt.i18n._"""
