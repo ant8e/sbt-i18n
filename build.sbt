@@ -36,7 +36,7 @@ ThisBuild / publishTo            := {
 }
 ThisBuild / publishMavenStyle    := true
 
-scalaVersion := "2.12.18"
+scalaVersion := "2.12.19"
 
 sbtPlugin := true
 
