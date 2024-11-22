@@ -7,7 +7,8 @@
 
 
 Sbt i18n is a very simple internationalization tools, that reads resources bundles files in properties files, json, or 
-[HOCON](https://github.com/lightbend/config#using-hocon-the-json-superset) format and generate Scala code. 
+[HOCON](https://github.com/lightbend/config#using-hocon-the-json-superset) format and generate Scala code. Strings in 
+[ICU](https://unicode-org.github.io/icu/userguide/format_parse/messages/) format are supported.
 
 A configuration file like this
 
@@ -18,6 +19,7 @@ en = {
   subsection {
     key3 = some text
   }
+  plural = "{dogsCount, plural, one {One dog is} other {# dogs are}}"
 }
 
 ```
@@ -25,9 +27,16 @@ en = {
 will generate the following Scala code 
 
 ```scala
+import com.ibm.icu.text.MessageFormat
+
+import java.util.Locale
+
 object Bundle {
+  val languages: Map[String, I18N] = Map(("en", en))
 
   abstract class I18N {
+    protected val locale: Locale
+    
     def key1: String
     def key2(x0: String): String
     
@@ -36,15 +45,25 @@ object Bundle {
     }
     
     def subsection: Subsection
+
+    def plural(dogsCount: Long): String
   }
 
   object en extends I18N {
+    override protected val locale: Locale = Locale.forLanguageTag("en")
+
     val key1 = """a text"""
-    def key2(x0: String): String = java.text.MessageFormat.format("""a parametrized text {0}""", x0)
+    def key2(x0: String): String = new MessageFormat("""a parametrized text {0}""", locale)
+      .format(java.util.Map.of("0", x0))
    
     object subsection  extends Subsection {
        val key4= """2"""
     }
+
+    def plural(dogsCount: Long): String = new MessageFormat(
+      """{dogsCount, plural, one {One dog is} other {# dogs are}}""", 
+      locale
+    ).format(java.util.Map.of("dogsCount", dogsCount))
 }
 }
      
@@ -57,7 +76,8 @@ translation is missing or on a faulty pattern is something you may want.
 
 ## Usage
 
-This plugin requires sbt 1.0.0+.
+This plugin requires sbt 1.0.0+. ICU support is implemented using 
+[icu4j](https://unicode-org.github.io/icu/userguide/icu4j/) library. 
 
 Add the following to `project/plugins.sbt:`
 
@@ -117,10 +137,27 @@ A message that is a valid *java.text.MessageFormat* pattern will be generated as
 See [MessageFormat](https://docs.oracle.com/javase/8/docs/api/java/text/MessageFormat.html)
 documentation for details about the supported patterns. 
 
-During generation the plugin will infer the correct argument type from the pattern. `number` will have type `Double` 
-by default and `Long` when the `integer` format style is selected. Date and time will have type `java.util.Date`. `choice` 
-being a number format will lead to a `Double`.  By default (when no format is specified), the argument will be of type 
-`String`.          
+ICU *MessageFormat* extends *java.text.MessageFormat* in a backward compatible way by adding three more 
+placeholder types:
+
+* plural
+* select
+* selectordinal
+
+Apart from new placeholder types ICU also adds named parameters to all supported placeholders
+
+```hocon
+en = {
+  msg1 = "{0, date, long}"
+  msg2 = "{birtDate, date, long}"
+}
+```
+
+During generation the plugin will infer the correct argument type from the pattern. 
+`number` will have type `Double` by default and `Long` when the `integer` format style is selected. 
+Date and time will have type `java.time.ZonedDateTime`. `choice` being a number format will lead to a `Double`. 
+`plural` and `selectordinal` will have type `Long`. For the `select` a new ADT will be generated and used.
+By default (when no format is specified), the argument will be of type `String`.
 
 ## Missing keys
 
