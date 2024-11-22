@@ -39,7 +39,7 @@ object SbtI18nPlugin extends AutoPlugin {
             i18nBundlePackageName.value,
             i18nBreakOnMissingKeys.value
           ),
-          mappings in packageSrc ++= managedSources.value pair (Path
+          packageSrc / mappings ++= managedSources.value pair (Path
             .relativeTo(sourceManaged.value) | Path.flat),
           sourceGenerators += generateI18NBundleTask.taskValue
         )

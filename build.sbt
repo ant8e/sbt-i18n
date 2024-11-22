@@ -22,7 +22,7 @@ ThisBuild / description := "An sbt plugin to transform your i18n bundles into Sc
 ThisBuild / startYear   := Some(2018)
 
 ThisBuild / licenses := List(
-  "Apache 2" -> new URL("http://www.apache.org/licenses/LICENSE-2.0.txt")
+  "Apache 2" -> new URI("http://www.apache.org/licenses/LICENSE-2.0.txt").toURL
 )
 
 ThisBuild / homepage := Some(url("https://github.com/ant8e/sbt-i18n"))
