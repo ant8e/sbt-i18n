@@ -230,4 +230,38 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
       }
     caught.getMessage shouldBe "There's missing value for 'de.topic.key1'"
   }
+  it must "emit the values with merged parameters" in {
+    import BundleEmitter.quote
+    val configString =
+      """
+        |fr {
+        |    text1 = "Mon paramètre est {0}"
+        |    text2 = "Mon paramètre est vide"
+        |}
+        |
+        |de {
+        |    text1 = "Meine Einstellung ist leer"
+        |    text2 = "Meine Einstellung ist {0}"
+        |}
+        |""".stripMargin
+
+    val config                 = ConfigFactory.parseString(configString.stripMargin)
+    val emitter: BundleEmitter = BundleEmitter(config, packageName)
+    emitter.emitValues("fr") should be(s"""object fr extends I18N {
+                                          |def text1(x0: String): String= java.text.MessageFormat.format(${quote(
+                                           "Mon paramètre est {0}"
+                                         )}, x0)
+                                          |def text2(x0: String): String= java.text.MessageFormat.format(${quote(
+                                           "Mon paramètre est vide"
+                                         )}, x0)
+                                          |}""".stripMargin)
+    emitter.emitValues("de") should be(s"""object de extends I18N {
+                                          |def text1(x0: String): String= java.text.MessageFormat.format(${quote(
+                                           "Meine Einstellung ist leer"
+                                         )}, x0)
+                                          |def text2(x0: String): String= java.text.MessageFormat.format(${quote(
+                                           "Meine Einstellung ist {0}"
+                                         )}, x0)
+                                          |}""".stripMargin)
+  }
 }
