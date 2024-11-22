@@ -11,7 +11,7 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
     val expected =
       """package """ + packageName + """
         |
-        |object Bundle {""".stripMargin
+        |import""".stripMargin
 
     BundleEmitter(ConfigFactory.empty(), packageName).emit() should startWith(expected)
   }
@@ -48,12 +48,10 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
 
     val config   = ConfigFactory.parseString(configString)
     val expected =
-      """package """.stripMargin + packageName + """
-         |
-         |object Bundle {
-         | val languages: Map[String, I18N] = Map(("de", de), ("zh-Hans", `zh-Hans`), ("fr", fr))""".stripMargin
+      """object Bundle {
+        | val languages: Map[String, I18N] = Map(("de", de), ("zh-Hans", `zh-Hans`), ("fr", fr))""".stripMargin
 
-    BundleEmitter(config, packageName).emit() should startWith(expected)
+    BundleEmitter(config, packageName).emit() should include(expected)
   }
 
   it must "identify all the translations keys" in {
@@ -142,11 +140,14 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
         |de {
         |    text  = Guttentag
         |    text2 = ich heiße MARVIN
+        |    now = "Jetzt ist es {0,time,short} Uhr"
         |}
         |""".stripMargin
 
     val expected =
       """abstract class I18N {
+        |protected val locale: Locale
+        |def now(x0: ZonedDateTime): String
         |def text: String
         |def text2: String
         |def text3(x0: Any): String
@@ -177,6 +178,7 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
         |de {
         |    text  = 1
         |    text2 = ich heiße MARVIN
+        |    now = "Jetzt ist es {0,time,short} Uhr"
         |    topic {
         |      key1 = Salat
         |    }
@@ -184,26 +186,38 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
         |""".stripMargin
 
     val config = ConfigFactory.parseString(configString.stripMargin)
-    BundleEmitter(config, packageName).emitValues("fr") should be(s"""object fr extends I18N {
+    BundleEmitter(config, packageName).emitValues("fr") should be(
+      s"""object fr extends I18N {
+         |override protected val locale: Locale = Locale.forLanguageTag("fr")
+         |
+         |def now(x0: ZonedDateTime): String = new MessageFormat(${quote(
+          "??? fr.now ???"
+        )}, locale).format(java.util.Map.of("0", toCalendar(x0)))
          |val text= ${quote("Bonjour")}
          |val text2= ${quote("??? fr.text2 ???")}
-         |def text3(x0: Any): String = com.ibm.icu.text.MessageFormat.format(${quote(
-                                                                      "Mon paramètre est {0}"
-                                                                    )}, java.util.Map.of("0", x0))
+         |def text3(x0: Any): String = new MessageFormat(${quote(
+          "Mon paramètre est {0}"
+        )}, locale).format(java.util.Map.of("0", x0))
          |object topic extends  Topic {
          |val key1= ${quote("Salade")}
          |val key2= ${quote("Légumes")}
          |}
          |
-        |}""".stripMargin)
+        |}""".stripMargin
+    )
 
     val emitter: BundleEmitter = BundleEmitter(config, packageName)
     emitter.emitValues("de") should be(s"""object de extends I18N {
+         |override protected val locale: Locale = Locale.forLanguageTag("de")
+         |
+         |def now(x0: ZonedDateTime): String = new MessageFormat(${quote(
+                                           "Jetzt ist es {0,time,short} Uhr"
+                                         )}, locale).format(java.util.Map.of("0", toCalendar(x0)))
          |val text= ${quote("1")}
          |val text2= ${quote("ich heiße MARVIN")}
-         |def text3(x0: Any): String = com.ibm.icu.text.MessageFormat.format(${quote(
+         |def text3(x0: Any): String = new MessageFormat(${quote(
                                            "??? de.text3 ???"
-                                         )}, java.util.Map.of("0", x0))
+                                         )}, locale).format(java.util.Map.of("0", x0))
          |object topic extends  Topic {
          |val key1= ${quote("Salat")}
          |val key2= ${quote("??? de.topic.key2 ???")}
@@ -252,20 +266,24 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
     val config                 = ConfigFactory.parseString(configString.stripMargin)
     val emitter: BundleEmitter = BundleEmitter(config, packageName)
     emitter.emitValues("fr") should be(s"""object fr extends I18N {
-                                          |def text1(x0: Any): String = com.ibm.icu.text.MessageFormat.format(${quote(
+                                          |override protected val locale: Locale = Locale.forLanguageTag("fr")
+                                          |
+                                          |def text1(x0: Any): String = new MessageFormat(${quote(
                                            "Mon paramètre est {0}"
-                                         )}, java.util.Map.of("0", x0))
-                                          |def text2(x0: Any): String = com.ibm.icu.text.MessageFormat.format(${quote(
+                                         )}, locale).format(java.util.Map.of("0", x0))
+                                          |def text2(x0: Any): String = new MessageFormat(${quote(
                                            "Mon paramètre est vide"
-                                         )}, java.util.Map.of("0", x0))
+                                         )}, locale).format(java.util.Map.of("0", x0))
                                           |}""".stripMargin)
     emitter.emitValues("de") should be(s"""object de extends I18N {
-                                          |def text1(x0: Any): String = com.ibm.icu.text.MessageFormat.format(${quote(
+                                          |override protected val locale: Locale = Locale.forLanguageTag("de")
+                                          |
+                                          |def text1(x0: Any): String = new MessageFormat(${quote(
                                            "Meine Einstellung ist leer"
-                                         )}, java.util.Map.of("0", x0))
-                                          |def text2(x0: Any): String = com.ibm.icu.text.MessageFormat.format(${quote(
+                                         )}, locale).format(java.util.Map.of("0", x0))
+                                          |def text2(x0: Any): String = new MessageFormat(${quote(
                                            "Meine Einstellung ist {0}"
-                                         )}, java.util.Map.of("0", x0))
+                                         )}, locale).format(java.util.Map.of("0", x0))
                                           |}""".stripMargin)
   }
 
@@ -344,6 +362,7 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
 
     val expected =
       """abstract class I18N {
+        |protected val locale: Locale
         |def choice(n: Long): String
         |def multi(n: Double, year: Long, x0: Any): String
         |def plural(dogsCount: Long): String
@@ -376,21 +395,23 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
     val config   = ConfigFactory.parseString(configString.stripMargin)
     val expected =
       s"""object en extends I18N {
-        |def choice(n: Long): String = com.ibm.icu.text.MessageFormat.format(${quote(
+        |override protected val locale: Locale = Locale.forLanguageTag("en")
+        |
+        |def choice(n: Long): String = new MessageFormat(${quote(
           "{n,choice,-1#is negative| 0#is zero or fraction | 1#is one |1.0<is 1+ |2#is two |2<is more than 2.}"
-        )}, java.util.Map.of("n", n))
-        |def multi(n: Double, year: Long, x0: Any): String = com.ibm.icu.text.MessageFormat.format(${quote(
+        )}, locale).format(java.util.Map.of("n", n))
+        |def multi(n: Double, year: Long, x0: Any): String = new MessageFormat(${quote(
           "{n,number,currency} {year, selectordinal, one {#st} two {#nd} three {#rd} other {#th}} {0}"
-        )}, java.util.Map.of("n", n, "year", year, "0", x0))
-        |def plural(dogsCount: Long): String = com.ibm.icu.text.MessageFormat.format(${quote(
+        )}, locale).format(java.util.Map.of("n", n, "year", year, "0", x0))
+        |def plural(dogsCount: Long): String = new MessageFormat(${quote(
           "{dogsCount, plural, one {One dog is} other {# dogs are}}"
-        )}, java.util.Map.of("dogsCount", dogsCount))
-        |def select(gender: Gender): String = com.ibm.icu.text.MessageFormat.format(${quote(
+        )}, locale).format(java.util.Map.of("dogsCount", dogsCount))
+        |def select(gender: Gender): String = new MessageFormat(${quote(
           "{gender, select, male {He uses} female {She uses} other {They use}}"
-        )}, java.util.Map.of("gender", gender))
-        |def selectordinal(year: Long): String = com.ibm.icu.text.MessageFormat.format(${quote(
+        )}, locale).format(java.util.Map.of("gender", gender))
+        |def selectordinal(year: Long): String = new MessageFormat(${quote(
           "{year, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}"
-        )}, java.util.Map.of("year", year))
+        )}, locale).format(java.util.Map.of("year", year))
         |}""".stripMargin
     BundleEmitter(config, packageName).emitValues("en") should be(expected)
 
