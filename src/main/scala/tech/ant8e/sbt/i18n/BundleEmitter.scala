@@ -38,10 +38,38 @@ case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys
   def emit(): String =
     s"""package $packageName
        |
+       |import com.ibm.icu.text.MessageFormat
+       |import com.ibm.icu.util.Calendar.MONDAY
+       |import com.ibm.icu.util.GregorianCalendar
+       |import com.ibm.icu.util.TimeZone
+       |
+       |import java.time.ZonedDateTime
+       |import java.time.temporal.ChronoField
+       |import java.util.Date
+       |import java.util.Locale
+       |
        |object Bundle {
        | ${emitMap()}
        | ${emitStructure()}
        | ${languages.map(emitValues).mkString("\n")}
+       |
+       |  /**
+       |    * Backport [[java.util.GregorianCalendar.from]] to ICU GregorianCalendar.
+       |    */
+       |  private def toCalendar(zdt: ZonedDateTime) = {
+       |    val cal = new GregorianCalendar(TimeZone.getTimeZone(zdt.getZone.getId))
+       |    cal.setGregorianChange(new Date(Long.MinValue))
+       |    cal.setFirstDayOfWeek(MONDAY)
+       |    cal.setMinimalDaysInFirstWeek(4)
+       |    try {
+       |      cal.setTimeInMillis(
+       |        Math.addExact(Math.multiplyExact(zdt.toEpochSecond, 1000), zdt.get(ChronoField.MILLI_OF_SECOND))
+       |      );
+       |    } catch {
+       |      case ex: ArithmeticException => throw new IllegalArgumentException(ex)
+       |    }
+       |    cal
+       |  }
        |}
      """.stripMargin
 
@@ -54,7 +82,7 @@ case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys
   private def toScalaType(paramType: ParamType) =
     paramType match {
       case AnyParam     => "Any"
-      case DateParam    => "java.util.Date"
+      case DateParam    => "ZonedDateTime"
       case DoubleParam  => "Double"
       case LongParam    => "Long"
       case e: EnumParam => e.typeName
@@ -106,6 +134,7 @@ case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys
         .mkString("\n")
 
     s"""abstract class I18N {
+       |protected val locale: Locale
        |${emit_(tree)}
        |}""".stripMargin
 
@@ -127,9 +156,17 @@ case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys
         .map(p => s"${p.fieldName}: ${toScalaType(p.paramType)}")
         .mkString(", ")
       val paramsApplication =
-        params.map(p => s""""${p.name}", ${p.fieldName}""").mkString("java.util.Map.of(", ", ", ")")
+        params
+          .map { p =>
+            if (p.paramType == DateParam) {
+              s""""${p.name}", toCalendar(${p.fieldName})"""
+            } else {
+              s""""${p.name}", ${p.fieldName}"""
+            }
+          }
+          .mkString("java.util.Map.of(", ", ", ")")
 
-      s"def ${ScalaIdentifier.asIdentifier(key)}($paramsStr): String = com.ibm.icu.text.MessageFormat.format(${quote(value)}, $paramsApplication)"
+      s"def ${ScalaIdentifier.asIdentifier(key)}($paramsStr): String = new MessageFormat(${quote(value)}, locale).format($paramsApplication)"
     }
 
     def emit_(t: Branch, path: String): String =
@@ -164,6 +201,9 @@ case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys
       }
 
     s"""object ${ScalaIdentifier.asIdentifier(lang)} extends I18N {
+       |override protected val locale: Locale = Locale.forLanguageTag("${ScalaIdentifier
+        .asIdentifier(lang)}")
+       |
        |${emit_(tree, lang)}
        |}""".stripMargin
 
