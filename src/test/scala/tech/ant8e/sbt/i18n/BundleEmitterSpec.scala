@@ -117,7 +117,11 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
         ),
         SimpleMessage("text", Map("fr" -> "Bonjour", "de" -> "Guttentag")),
         SimpleMessage("text2", Map("de" -> "ich heiße MARVIN")),
-        ParametrizedMessage("text3", Map("fr" -> "Mon paramètre est {0}"), List(Param.StringParam))
+        ParametrizedMessage(
+          "text3",
+          Map("fr" -> "Mon paramètre est {0}"),
+          List(Param("0", Param.AnyParam))
+        )
       )
     )
 
@@ -145,7 +149,7 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
       """abstract class I18N {
         |def text: String
         |def text2: String
-        |def text3(x0: String): String
+        |def text3(x0: Any): String
         |abstract class Topic {
         |def key1: String
         |}
@@ -183,9 +187,9 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
     BundleEmitter(config, packageName).emitValues("fr") should be(s"""object fr extends I18N {
          |val text= ${quote("Bonjour")}
          |val text2= ${quote("??? fr.text2 ???")}
-         |def text3(x0: String): String= java.text.MessageFormat.format(${quote(
+         |def text3(x0: Any): String = com.ibm.icu.text.MessageFormat.format(${quote(
                                                                       "Mon paramètre est {0}"
-                                                                    )}, x0)
+                                                                    )}, java.util.Map.of("0", x0))
          |object topic extends  Topic {
          |val key1= ${quote("Salade")}
          |val key2= ${quote("Légumes")}
@@ -197,9 +201,9 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
     emitter.emitValues("de") should be(s"""object de extends I18N {
          |val text= ${quote("1")}
          |val text2= ${quote("ich heiße MARVIN")}
-         |def text3(x0: String): String= java.text.MessageFormat.format(${quote(
+         |def text3(x0: Any): String = com.ibm.icu.text.MessageFormat.format(${quote(
                                            "??? de.text3 ???"
-                                         )}, x0)
+                                         )}, java.util.Map.of("0", x0))
          |object topic extends  Topic {
          |val key1= ${quote("Salat")}
          |val key2= ${quote("??? de.topic.key2 ???")}
@@ -248,20 +252,147 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
     val config                 = ConfigFactory.parseString(configString.stripMargin)
     val emitter: BundleEmitter = BundleEmitter(config, packageName)
     emitter.emitValues("fr") should be(s"""object fr extends I18N {
-                                          |def text1(x0: String): String= java.text.MessageFormat.format(${quote(
+                                          |def text1(x0: Any): String = com.ibm.icu.text.MessageFormat.format(${quote(
                                            "Mon paramètre est {0}"
-                                         )}, x0)
-                                          |def text2(x0: String): String= java.text.MessageFormat.format(${quote(
+                                         )}, java.util.Map.of("0", x0))
+                                          |def text2(x0: Any): String = com.ibm.icu.text.MessageFormat.format(${quote(
                                            "Mon paramètre est vide"
-                                         )}, x0)
+                                         )}, java.util.Map.of("0", x0))
                                           |}""".stripMargin)
     emitter.emitValues("de") should be(s"""object de extends I18N {
-                                          |def text1(x0: String): String= java.text.MessageFormat.format(${quote(
+                                          |def text1(x0: Any): String = com.ibm.icu.text.MessageFormat.format(${quote(
                                            "Meine Einstellung ist leer"
-                                         )}, x0)
-                                          |def text2(x0: String): String= java.text.MessageFormat.format(${quote(
+                                         )}, java.util.Map.of("0", x0))
+                                          |def text2(x0: Any): String = com.ibm.icu.text.MessageFormat.format(${quote(
                                            "Meine Einstellung ist {0}"
-                                         )}, x0)
+                                         )}, java.util.Map.of("0", x0))
                                           |}""".stripMargin)
+  }
+
+  it should "build the tree ICU" in {
+    val configString =
+      """
+        |en {
+        |    choice = "{n,choice,-1#is negative| 0#is zero or fraction | 1#is one |1.0<is 1+ |2#is two |2<is more than 2.}"
+        |    plural = "{dogsCount, plural, one {One dog is} other {# dogs are}}"
+        |    selectordinal = "{year, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}"
+        |    select = "{gender, select, male {He uses} female {She uses} other {They use}}"
+        |    multi = "{n,number,currency} {year, selectordinal, one {#st} two {#nd} three {#rd} other {#th}} {0}"
+        |}
+        |""".stripMargin
+    import BundleEmitter._
+    val config       = ConfigFactory.parseString(configString.stripMargin)
+    val root         = BundleEmitter(config, packageName).buildTree()
+    val expected     = new Root(
+      Set(
+        ParametrizedMessage(
+          "choice",
+          Map(
+            "en" -> "{n,choice,-1#is negative| 0#is zero or fraction | 1#is one |1.0<is 1+ |2#is two |2<is more than 2.}"
+          ),
+          List(Param("n", Param.LongParam))
+        ),
+        ParametrizedMessage(
+          "multi",
+          Map(
+            "en" -> "{n,number,currency} {year, selectordinal, one {#st} two {#nd} three {#rd} other {#th}} {0}"
+          ),
+          List(
+            Param("n", Param.DoubleParam),
+            Param("year", Param.LongParam),
+            Param("0", Param.AnyParam)
+          )
+        ),
+        ParametrizedMessage(
+          "plural",
+          Map(
+            "en" -> "{dogsCount, plural, one {One dog is} other {# dogs are}}"
+          ),
+          List(Param("dogsCount", Param.LongParam))
+        ),
+        ParametrizedMessage(
+          "selectordinal",
+          Map(
+            "en" -> "{year, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}"
+          ),
+          List(Param("year", Param.LongParam))
+        ),
+        ParametrizedMessage(
+          "select",
+          Map(
+            "en" -> "{gender, select, male {He uses} female {She uses} other {They use}}"
+          ),
+          List(Param("gender", Param.EnumParam("gender", List("male", "female", "other"))))
+        )
+      )
+    )
+
+    root should be(expected)
+  }
+
+  it must "emit the structure ICU" in {
+    val configString =
+      """
+        |en {
+        |    choice = "{n,choice,-1#is negative| 0#is zero or fraction | 1#is one |1.0<is 1+ |2#is two |2<is more than 2.}"
+        |    plural = "{dogsCount, plural, one {One dog is} other {# dogs are}}"
+        |    selectordinal = "{year, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}"
+        |    select = "{gender, select, male {He uses} female {She uses} other {They use}}"
+        |    multi = "{n,number,currency} {year, selectordinal, one {#st} two {#nd} three {#rd} other {#th}} {0}"
+        |}
+        |""".stripMargin
+
+    val expected =
+      """abstract class I18N {
+        |def choice(n: Long): String
+        |def multi(n: Double, year: Long, x0: Any): String
+        |def plural(dogsCount: Long): String
+        |sealed trait Gender
+        |object Gender {
+        |case object male extends Gender
+        |case object female extends Gender
+        |case object other extends Gender
+        |}
+        |def select(gender: Gender): String
+        |def selectordinal(year: Long): String
+        |}""".stripMargin
+
+    val config = ConfigFactory.parseString(configString.stripMargin)
+    BundleEmitter(config, packageName).emitStructure() should be(expected)
+  }
+  it must "emit the values ICU" in {
+    import BundleEmitter.quote
+    val configString =
+      """
+        |en {
+        |    choice = "{n,choice,-1#is negative| 0#is zero or fraction | 1#is one |1.0<is 1+ |2#is two |2<is more than 2.}"
+        |    plural = "{dogsCount, plural, one {One dog is} other {# dogs are}}"
+        |    selectordinal = "{year, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}"
+        |    select = "{gender, select, male {He uses} female {She uses} other {They use}}"
+        |    multi = "{n,number,currency} {year, selectordinal, one {#st} two {#nd} three {#rd} other {#th}} {0}"
+        |}
+        |""".stripMargin
+
+    val config   = ConfigFactory.parseString(configString.stripMargin)
+    val expected =
+      s"""object en extends I18N {
+        |def choice(n: Long): String = com.ibm.icu.text.MessageFormat.format(${quote(
+          "{n,choice,-1#is negative| 0#is zero or fraction | 1#is one |1.0<is 1+ |2#is two |2<is more than 2.}"
+        )}, java.util.Map.of("n", n))
+        |def multi(n: Double, year: Long, x0: Any): String = com.ibm.icu.text.MessageFormat.format(${quote(
+          "{n,number,currency} {year, selectordinal, one {#st} two {#nd} three {#rd} other {#th}} {0}"
+        )}, java.util.Map.of("n", n, "year", year, "0", x0))
+        |def plural(dogsCount: Long): String = com.ibm.icu.text.MessageFormat.format(${quote(
+          "{dogsCount, plural, one {One dog is} other {# dogs are}}"
+        )}, java.util.Map.of("dogsCount", dogsCount))
+        |def select(gender: Gender): String = com.ibm.icu.text.MessageFormat.format(${quote(
+          "{gender, select, male {He uses} female {She uses} other {They use}}"
+        )}, java.util.Map.of("gender", gender))
+        |def selectordinal(year: Long): String = com.ibm.icu.text.MessageFormat.format(${quote(
+          "{year, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}"
+        )}, java.util.Map.of("year", year))
+        |}""".stripMargin
+    BundleEmitter(config, packageName).emitValues("en") should be(expected)
+
   }
 }
