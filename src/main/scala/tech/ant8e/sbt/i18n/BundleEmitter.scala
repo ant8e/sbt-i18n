@@ -183,9 +183,14 @@ case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys
             )
 
           val newSub = subChild match {
-            case m: SimpleMessage       => m.copy(messages = m.messages + (lang -> rawValue))
-            case m: ParametrizedMessage => m.copy(messages = m.messages + (lang -> rawValue))
-            case _                      => subChild // TODO mergeError
+            case SimpleMessage(key, messages) if paramTypes.nonEmpty =>
+              ParametrizedMessage(key, messages + (lang -> rawValue), paramTypes)
+            case m: SimpleMessage                                    =>
+              m.copy(messages = m.messages + (lang -> rawValue))
+            case m: ParametrizedMessage                              =>
+              m.copy(messages = m.messages + (lang -> rawValue))
+            case _                                                   =>
+              subChild // TODO mergeError
           }
           b.copy(children = b.children - subChild + newSub)
 
