@@ -43,7 +43,13 @@ object SbtI18nPlugin extends AutoPlugin {
             .relativeTo(sourceManaged.value) | Path.flat),
           sourceGenerators += generateI18NBundleTask.taskValue
         )
-    ) ++ Seq(i18nBundlePackageName := "org.example.i18n", i18nBreakOnMissingKeys := false)
+    ) ++ Seq(
+      i18nBundlePackageName  := "org.example.i18n",
+      i18nBreakOnMissingKeys := false,
+      libraryDependencies ++= Seq(
+        "com.ibm.icu" % "icu4j" % "75.1"
+      )
+    )
 
   def generateFromSource(
       streams: TaskStreams,

@@ -1,12 +1,23 @@
 package tech.ant8e.sbt.i18n
 
-import java.text.{DateFormat, Format, MessageFormat, NumberFormat}
-
-import com.typesafe.config.{Config, ConfigUtil}
-import tech.ant8e.sbt.i18n.BundleEmitter.Param._
+import com.google.common.base.CaseFormat
+import com.ibm.icu.text.DateFormat
+import com.ibm.icu.text.MessageFormat
+import com.ibm.icu.text.MessagePatternUtil
+import com.ibm.icu.text.MessagePatternUtil.ArgNode
+import com.ibm.icu.text.MessagePatternUtil.MessageNode
+import com.ibm.icu.text.MessagePatternUtil.{Node => PatternNode}
+import com.ibm.icu.text.MessagePattern
+import com.ibm.icu.text.NumberFormat
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigUtil
 import tech.ant8e.sbt.i18n.BundleEmitter._
+import tech.ant8e.sbt.i18n.BundleEmitter.Param._
 
+import java.text.Format
+import scala.annotation.tailrec
 import scala.collection.JavaConverters._
+import scala.collection.immutable.ListMap
 import scala.util.Try
 case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys: Boolean = false) {
 
@@ -42,31 +53,47 @@ case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys
 
   private def toScalaType(paramType: ParamType) =
     paramType match {
-      case StringParam => "String"
-      case DateParam   => "java.util.Date"
-      case DoubleParam => "Double"
-      case LongParam   => "Long "
+      case AnyParam     => "Any"
+      case DateParam    => "java.util.Date"
+      case DoubleParam  => "Double"
+      case LongParam    => "Long"
+      case e: EnumParam => e.typeName
     }
 
   private[i18n] def emitStructure(): String = {
+    def emitEnum(e: EnumParam) =
+      e.variants
+        .map(v => s"case object $v extends ${e.typeName}")
+        .mkString(
+          s"""sealed trait ${e.typeName}
+           |object ${e.typeName} {
+           |""".stripMargin,
+          "\n",
+          "\n}\n"
+        )
 
-    def emitKeySimpleDef(key: String)                             = s"def ${ScalaIdentifier.asIdentifier(key)}: String"
-    def emitKeyParamDef(key: String, paramTypes: List[ParamType]) = {
+    def emitKeySimpleDef(key: String)                     = s"def ${ScalaIdentifier.asIdentifier(key)}: String"
+    def emitKeyParamDef(key: String, params: List[Param]) = {
+      val enums = params.collect { case Param(_, enum: EnumParam) =>
+        enum
+      }
 
-      val params = paramTypes.zipWithIndex
-        .map { case (ptype, index) => s"x$index: ${toScalaType(ptype)}" }
-        .mkString(",")
+      val enumsStr = enums.map(emitEnum).mkString("\n")
 
-      s"def ${ScalaIdentifier.asIdentifier(key)}($params): String"
+      val paramsStr = params
+        .map(p => s"${p.fieldName}: ${toScalaType(p.paramType)}")
+        .mkString(", ")
+
+      s"${enumsStr}def ${ScalaIdentifier.asIdentifier(key)}($paramsStr): String"
     }
 
     def emit_(t: Branch): String =
       t.children.toList
         .sortBy(_.key) // ensure the generated string are in the order of the orig set
         .map {
-          case SimpleMessage(key, _)                   => emitKeySimpleDef(key)
-          case ParametrizedMessage(key, _, paramsType) => emitKeyParamDef(key, paramsType)
-          case b @ Branch(key, _)                      =>
+          case SimpleMessage(key, _)               => emitKeySimpleDef(key)
+          case ParametrizedMessage(key, _, params) => emitKeyParamDef(key, params)
+          case b @ Branch(key, _)                  =>
             s"""abstract class ${ScalaIdentifier.asIdentifier(key.capitalize)} {
              |${emit_(b)}
              |}
@@ -94,34 +121,33 @@ case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys
     def emitSimpleKeyVal(key: String, value: String) =
       s"val ${ScalaIdentifier.asIdentifier(key)}= ${quote(value)}"
 
-    def emitKeyParamDef(key: String, value: String, paramTypes: List[ParamType]) = {
+    def emitKeyParamDef(key: String, value: String, params: List[Param]) = {
 
-      val params            = paramTypes.zipWithIndex
-        .map { case (ptype, index) => s"x$index: ${toScalaType(ptype)}" }
-        .mkString(",")
-      val paramsApplication = paramTypes.zipWithIndex
-        .map { case (_, index) => s"x$index" }
-        .mkString(",")
+      val paramsStr         = params
+        .map(p => s"${p.fieldName}: ${toScalaType(p.paramType)}")
+        .mkString(", ")
+      val paramsApplication =
+        params.map(p => s""""${p.name}", ${p.fieldName}""").mkString("java.util.Map.of(", ", ", ")")
 
-      s"def ${ScalaIdentifier.asIdentifier(key)}($params): String= java.text.MessageFormat.format(${quote(value)}, $paramsApplication)"
+      s"def ${ScalaIdentifier.asIdentifier(key)}($paramsStr): String = com.ibm.icu.text.MessageFormat.format(${quote(value)}, $paramsApplication)"
     }
 
     def emit_(t: Branch, path: String): String =
       t.children.toList
         .sortBy(_.key) // ensure the generated string are in the order of the orig set
         .map {
-          case SimpleMessage(key, messages)                   =>
+          case SimpleMessage(key, messages)               =>
             emitSimpleKeyVal(
               key,
               messages.getOrElse(lang, defaultIfAllowed(s"$path.$key", s"??? $path.$key ???"))
             )
-          case ParametrizedMessage(key, messages, paramsType) =>
+          case ParametrizedMessage(key, messages, params) =>
             emitKeyParamDef(
               key,
               messages.getOrElse(lang, defaultIfAllowed(s"$path.$key", s"??? $path.$key ???")),
-              paramsType
+              params
             )
-          case b @ Branch(key, _)                             =>
+          case b @ Branch(key, _)                         =>
             s"""object ${ScalaIdentifier.asIdentifier(key)} extends  ${ScalaIdentifier
                 .asIdentifier(key.capitalize)} {
                |${emit_(b, s"$path.$key")}
@@ -165,31 +191,31 @@ case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys
       (t, subPath) match {
 
         case (b @ Branch(_, children), head :: Nil) =>
-          val params = BundleEmitter.Param.identifyParams(rawValue)
+          val paramsE = BundleEmitter.ParamsExtractor.extractParams(rawValue)
 
-          if (params.isLeft) {
+          if (paramsE.isLeft) {
             // TODO reportError
           }
 
-          val paramTypes = params.getOrElse(List.empty)
+          val params = paramsE.getOrElse(List.empty)
 
           val subChild = children
             .find(_.key == head)
             .getOrElse(
-              if (paramTypes.isEmpty)
+              if (params.isEmpty)
                 SimpleMessage(head, Map.empty)
               else
-                ParametrizedMessage(head, Map.empty, paramTypes)
+                ParametrizedMessage(head, Map.empty, params)
             )
 
           val newSub = subChild match {
-            case SimpleMessage(key, messages) if paramTypes.nonEmpty =>
-              ParametrizedMessage(key, messages + (lang -> rawValue), paramTypes)
-            case m: SimpleMessage                                    =>
+            case SimpleMessage(key, messages) if params.nonEmpty =>
+              ParametrizedMessage(key, messages + (lang -> rawValue), params)
+            case m: SimpleMessage                                =>
               m.copy(messages = m.messages + (lang -> rawValue))
-            case m: ParametrizedMessage                              =>
+            case m: ParametrizedMessage                          =>
               m.copy(messages = m.messages + (lang -> rawValue))
-            case _                                                   =>
+            case _                                               =>
               subChild // TODO mergeError
           }
           b.copy(children = b.children - subChild + newSub)
@@ -230,7 +256,7 @@ private[i18n] object BundleEmitter {
   case class ParametrizedMessage(
       key: String,
       messages: Map[String, String],
-      paramsType: List[Param.ParamType]
+      params: List[Param]
   ) extends Node
 
   def quote(s: String) = {
@@ -238,28 +264,134 @@ private[i18n] object BundleEmitter {
     s"$q$s$q"
   }
 
+  case class Param(name: String, paramType: ParamType) {
+    lazy val fieldName: String =
+      if (StringUtils.isNumeric(name)) {
+        s"x$name"
+      } else {
+        StringUtils.fieldName(name)
+      }
+  }
+
   object Param {
 
     sealed trait ParamType
-    case object StringParam extends ParamType
-    case object DateParam   extends ParamType
-    case object DoubleParam extends ParamType
-    case object LongParam   extends ParamType
+    case object AnyParam                                       extends ParamType
+    case object DateParam                                      extends ParamType
+    case object DoubleParam                                    extends ParamType
+    case object LongParam                                      extends ParamType
+    case class EnumParam(name: String, variants: List[String]) extends ParamType {
+      val typeName: String = if (StringUtils.isNumeric(name)) {
+        StringUtils.typeName(variants.mkString("_"))
+      } else {
+        StringUtils.typeName(name)
+      }
+    }
+  }
 
-    def identifyParams(s: String): Either[Throwable, List[ParamType]] =
+  object StringUtils {
+    def typeName(s: String): String =
+      normalize(s, CaseFormat.UPPER_CAMEL)
+
+    def fieldName(s: String): String =
+      normalize(s, CaseFormat.LOWER_CAMEL)
+
+    def isNumeric(s: String): Boolean = s.forall(_.isDigit)
+
+    private def normalize(name: String, format: CaseFormat) =
+      if (name.contains("_"))
+        CaseFormat.LOWER_UNDERSCORE.to(format, name.replaceAll("\\W", ""))
+      else if (name.charAt(0).isLower) CaseFormat.LOWER_CAMEL.to(format, name.replaceAll("\\W", ""))
+      else CaseFormat.UPPER_CAMEL.to(format, name.replaceAll("\\W", ""))
+  }
+
+  object ParamsExtractor {
+    private case class Result(arguments: ListMap[String, Param]) {
+      def +:(argument: Param): Result =
+        if (!arguments.keySet.contains(argument.name)) {
+          val argumentsUpdated = arguments + (argument.name -> argument)
+          Result(argumentsUpdated)
+        } else {
+          val existingArgument = arguments(argument.name)
+
+          (existingArgument.paramType, argument.paramType) match {
+            case (t1, t2) if t1 == t2 => this
+            // If one of the arguments is Any and another is more specific, use the more specific one
+            case (_, AnyParam)        => this
+            case (AnyParam, _)        =>
+              val argumentsUpdated = arguments - argument.name + (argument.name -> argument)
+              Result(argumentsUpdated)
+            case _                    => throw new IllegalArgumentException("types mismatch")
+          }
+        }
+    }
+
+    private object Result {
+      val empty: Result = new Result(ListMap.empty)
+    }
+
+    def extractParams(s: String): Either[Throwable, List[Param]] = {
+      @tailrec
+      def loop(nodes: List[PatternNode])(acc: Result): Result =
+        nodes match {
+          case (node: MessageNode) :: tail =>
+            val next = node.getContents.asScala.toList
+
+            loop(next ++ tail)(acc)
+          case (node: ArgNode) :: tail     =>
+            val paramType = getArgumentType(node)
+            val argument  = Param(node.getName, paramType)
+            val next      = getNext(node)
+
+            loop(next ++ tail)(argument +: acc)
+          case _ :: tail                   => loop(tail)(acc)
+          case Nil                         => acc
+        }
+
       Try {
-        new MessageFormat(s).getFormatsByArgumentIndex.toList
-          .map(javaTextFormatToParamType)
+        val msgPattern = new MessagePattern(s).freeze()
 
+        val node = MessagePatternUtil.buildMessageNode(msgPattern)
+
+        loop(node :: Nil)(Result.empty).arguments.values.toList
       }.toEither
 
-    private def javaTextFormatToParamType(format: Format) =
+    }
+
+    private def getArgumentType(node: ArgNode): ParamType =
+      node.getArgType match {
+        case MessagePattern.ArgType.NONE | MessagePattern.ArgType.SIMPLE =>
+          // For simple arguments extract type by checking the param format
+          val mf     = new MessageFormat(node.toString)
+          val format = mf.getFormats.head
+          javaTextFormatToParamType(format)
+        case MessagePattern.ArgType.SELECT                               =>
+          // Build enum with all values
+          val variants = node.getComplexStyle.getVariants.asScala.toList.map(_.getSelector)
+          EnumParam(node.getName, variants)
+        case _                                                           =>
+          // For plural, selectordinal and choice check variant selectors and select between long and double
+          val allVariantsInteger =
+            node.getComplexStyle.getVariants.asScala.forall(v =>
+              !v.isSelectorNumeric || v.getSelectorValue.isWhole
+            )
+          if (allVariantsInteger) LongParam else DoubleParam
+
+      }
+
+    // extract child messages to put to the loop queue
+    private def getNext(node: ArgNode): List[PatternNode] =
+      Option(node.getComplexStyle).fold(List.empty[PatternNode]) { cs =>
+        cs.getVariants.asScala.toList.map(_.getMessage)
+      }
+
+    private def javaTextFormatToParamType(format: Format): ParamType =
       format match {
-        case null                                    => StringParam
+        case null                                    => AnyParam
         case _: DateFormat                           => DateParam
         case x: NumberFormat if x.isParseIntegerOnly => LongParam
         case _: NumberFormat                         => DoubleParam
-        case _                                       => StringParam
+        case _                                       => AnyParam
       }
   }
 
