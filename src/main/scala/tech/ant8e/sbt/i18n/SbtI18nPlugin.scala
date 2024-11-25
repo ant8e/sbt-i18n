@@ -47,7 +47,7 @@ object SbtI18nPlugin extends AutoPlugin {
       i18nBundlePackageName  := "org.example.i18n",
       i18nBreakOnMissingKeys := false,
       libraryDependencies ++= Seq(
-        "com.ibm.icu" % "icu4j" % "75.1"
+        "com.ibm.icu" % "icu4j" % "76.1"
       )
     )
 
