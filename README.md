@@ -81,7 +81,7 @@ This plugin requires sbt 1.0.0+. ICU support is implemented using
 
 Add the following to `project/plugins.sbt:`
 
-    addSbtPlugin("tech.ant8e" % "sbt-i18n" % "0.5")
+    addSbtPlugin("tech.ant8e" % "sbt-i18n" % "0.7")
 
 Write a config file in `src/main/i18n/xxx.conf`.
 
