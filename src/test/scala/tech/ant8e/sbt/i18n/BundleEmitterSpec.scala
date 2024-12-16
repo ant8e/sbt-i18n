@@ -162,6 +162,44 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
     val config = ConfigFactory.parseString(configString.stripMargin)
     BundleEmitter(config, packageName).emitStructure() should be(expected)
   }
+  it must "emit the structure with optional return types" in {
+    val configString =
+      """
+        |fr {
+        |    text = Bonjour
+        |    text3 = "Mon paramètre est {0}"
+        |    topic {
+        |      key1 = Salade
+        |    }
+        |}
+        |
+        |de {
+        |    text  = Guttentag
+        |    text2 = ich heiße MARVIN
+        |    now = "Jetzt ist es {0,time,short} Uhr"
+        |}
+        |""".stripMargin
+
+    val expected =
+      """abstract class I18N {
+        |protected val locale: Locale
+        |def now(x0: ZonedDateTime): Option[String]
+        |def text: Option[String]
+        |def text2: Option[String]
+        |def text3(x0: Any): Option[String]
+        |abstract class Topic {
+        |def key1: Option[String]
+        |}
+        |
+        |def topic: Topic
+        |
+        |}""".stripMargin
+
+    val config = ConfigFactory.parseString(configString.stripMargin)
+    BundleEmitter(config, packageName, optionalReturnValues = true).emitStructure() should be(
+      expected
+    )
+  }
   it must "emit the values" in {
     import BundleEmitter.quote
     val configString =
@@ -247,6 +285,66 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
         BundleEmitter(config, packageName, breakOnMissingKeys = true).emit()
       }
     caught.getMessage shouldBe "There's missing value for 'de.topic.key1'"
+  }
+  it must "emit the values with optional return type" in {
+    import BundleEmitter.quote
+    val configString =
+      """
+        |fr {
+        |    text = Bonjour
+        |    text3 = "Mon paramètre est {0}"
+        |    topic {
+        |      key1 = Salade
+        |    }
+        |    topic.key2 = Légumes
+        |}
+        |
+        |de {
+        |    text  = 1
+        |    text2 = ich heiße MARVIN
+        |    now = "Jetzt ist es {0,time,short} Uhr"
+        |    topic {
+        |      key1 = Salat
+        |    }
+        |}
+        |""".stripMargin
+
+    val config = ConfigFactory.parseString(configString.stripMargin)
+    BundleEmitter(config, packageName, optionalReturnValues = true).emitValues("fr") should be(
+      s"""object fr extends I18N {
+         |override protected val locale: Locale = Locale.forLanguageTag("fr")
+         |
+         |def now(x0: ZonedDateTime): Option[String] = None
+         |val text= Some(${quote("Bonjour")})
+         |val text2= None
+         |def text3(x0: Any): Option[String] = Some(new MessageFormat(${quote(
+          "Mon paramètre est {0}"
+        )}, locale).format(java.util.Map.of("0", x0)))
+         |object topic extends  Topic {
+         |val key1= Some(${quote("Salade")})
+         |val key2= Some(${quote("Légumes")})
+         |}
+         |
+         |}""".stripMargin
+    )
+
+    BundleEmitter(config, packageName, optionalReturnValues = true).emitValues("de") should be(
+      s"""object de extends I18N {
+         |override protected val locale: Locale = Locale.forLanguageTag("de")
+         |
+         |def now(x0: ZonedDateTime): Option[String] = Some(new MessageFormat(${quote(
+          "Jetzt ist es {0,time,short} Uhr"
+        )}, locale).format(java.util.Map.of("0", toCalendar(x0))))
+         |val text= Some(${quote("1")})
+         |val text2= Some(${quote("ich heiße MARVIN")})
+         |def text3(x0: Any): Option[String] = None
+         |object topic extends  Topic {
+         |val key1= Some(${quote("Salat")})
+         |val key2= None
+         |}
+         |
+         |}""".stripMargin
+    )
   }
   it must "emit the values with merged parameters" in {
     import BundleEmitter.quote
