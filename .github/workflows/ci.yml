@@ -19,7 +19,8 @@ jobs:
       - uses: coursier/setup-action@v1
         with:
           jvm: "temurin:${{ matrix.java }}"
-      - uses: coursier/cache-action@v5
+          apps: sbt 
+      - uses: coursier/cache-action@v6
       - run: sbt -v -Dfile.encoding=UTF8 -J-XX:ReservedCodeCacheSize=256M $(if [[ "${{matrix.sbt_version}}" != "" ]] ; then echo "^^${{matrix.sbt_version}}" ; fi) test scripted
       - run: rm -rf "$HOME/.ivy2/local"
       - run: rm -rf "$HOME/.ivy2/cache/tech.ant8e"
