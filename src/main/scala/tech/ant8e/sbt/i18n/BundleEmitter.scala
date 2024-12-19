@@ -19,7 +19,12 @@ import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.collection.immutable.ListMap
 import scala.util.Try
-case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys: Boolean = false) {
+case class BundleEmitter(
+    config: Config,
+    packageName: String,
+    breakOnMissingKeys: Boolean = false,
+    optionalReturnValues: Boolean = false
+) {
 
   val languages =
     config
@@ -100,7 +105,9 @@ case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys
           "\n}\n"
         )
 
-    def emitKeySimpleDef(key: String)                     = s"def ${ScalaIdentifier.asIdentifier(key)}: String"
+    def emitReturnType                                    = if (optionalReturnValues) "Option[String]" else "String"
+    def emitKeySimpleDef(key: String)                     =
+      s"def ${ScalaIdentifier.asIdentifier(key)}: ${emitReturnType}"
     def emitKeyParamDef(key: String, params: List[Param]) = {
       val enums = params.collect { case Param(_, enum: EnumParam) =>
         enum
@@ -112,7 +119,7 @@ case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys
         .map(p => s"${p.fieldName}: ${toScalaType(p.paramType)}")
         .mkString(", ")
 
-      s"${enumsStr}def ${ScalaIdentifier.asIdentifier(key)}($paramsStr): String"
+      s"${enumsStr}def ${ScalaIdentifier.asIdentifier(key)}($paramsStr): ${emitReturnType}"
     }
 
     def emit_(t: Branch): String =
@@ -150,41 +157,65 @@ case class BundleEmitter(config: Config, packageName: String, breakOnMissingKeys
     def emitSimpleKeyVal(key: String, value: String) =
       s"val ${ScalaIdentifier.asIdentifier(key)}= ${quote(value)}"
 
-    def emitKeyParamDef(key: String, value: String, params: List[Param]) = {
+    def emitSimpleKeyValOptional(key: String, value: Option[String]) =
+      value.fold(s"val ${ScalaIdentifier.asIdentifier(key)}= None")(v =>
+        s"val ${ScalaIdentifier.asIdentifier(key)}= Some(${quote(v)})"
+      )
 
-      val paramsStr         = params
+    def emitParamsStr(params: List[Param]) =
+      params
         .map(p => s"${p.fieldName}: ${toScalaType(p.paramType)}")
         .mkString(", ")
-      val paramsApplication =
-        params
-          .map { p =>
-            if (p.paramType == DateParam) {
-              s""""${p.name}", toCalendar(${p.fieldName})"""
-            } else {
-              s""""${p.name}", ${p.fieldName}"""
-            }
+
+    def emitParamsApplication(params: List[Param]) =
+      params
+        .map { p =>
+          if (p.paramType == DateParam) {
+            s""""${p.name}", toCalendar(${p.fieldName})"""
+          } else {
+            s""""${p.name}", ${p.fieldName}"""
           }
-          .mkString("java.util.Map.of(", ", ", ")")
+        }
+        .mkString("java.util.Map.of(", ", ", ")")
+
+    def emitKeyParamDef(key: String, value: String, params: List[Param]) = {
+      val paramsStr         = emitParamsStr(params)
+      val paramsApplication = emitParamsApplication(params)
 
       s"def ${ScalaIdentifier.asIdentifier(key)}($paramsStr): String = new MessageFormat(${quote(value)}, locale).format($paramsApplication)"
+    }
+
+    def emitKeyParamDefOptional(key: String, value: Option[String], params: List[Param]) = {
+      val paramsStr         = emitParamsStr(params)
+      val paramsApplication = emitParamsApplication(params)
+
+      value.fold(s"def ${ScalaIdentifier.asIdentifier(key)}($paramsStr): Option[String] = None")(
+        v =>
+          s"def ${ScalaIdentifier
+              .asIdentifier(key)}($paramsStr): Option[String] = Some(new MessageFormat(${quote(v)}, locale).format($paramsApplication))"
+      )
     }
 
     def emit_(t: Branch, path: String): String =
       t.children.toList
         .sortBy(_.key) // ensure the generated string are in the order of the orig set
         .map {
-          case SimpleMessage(key, messages)               =>
+          case SimpleMessage(key, messages) if optionalReturnValues               =>
+            emitSimpleKeyValOptional(key, messages.get(lang))
+          case SimpleMessage(key, messages)                                       =>
             emitSimpleKeyVal(
               key,
               messages.getOrElse(lang, defaultIfAllowed(s"$path.$key", s"??? $path.$key ???"))
             )
-          case ParametrizedMessage(key, messages, params) =>
+          case ParametrizedMessage(key, messages, params) if optionalReturnValues =>
+            emitKeyParamDefOptional(key, messages.get(lang), params)
+          case ParametrizedMessage(key, messages, params)                         =>
             emitKeyParamDef(
               key,
               messages.getOrElse(lang, defaultIfAllowed(s"$path.$key", s"??? $path.$key ???")),
               params
             )
-          case b @ Branch(key, _)                         =>
+          case b @ Branch(key, _)                                                 =>
             s"""object ${ScalaIdentifier.asIdentifier(key)} extends  ${ScalaIdentifier
                 .asIdentifier(key.capitalize)} {
                |${emit_(b, s"$path.$key")}
