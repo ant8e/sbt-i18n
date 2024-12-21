@@ -14,12 +14,14 @@ object SbtI18nPlugin extends AutoPlugin {
   override def requires = JvmPlugin
 
   object autoImport {
-    val i18nBundlePackageName  =
+    val i18nBundlePackageName    =
       settingKey[String]("Package name for the i18n bundle.")
-    val generateI18NBundleTask =
+    val generateI18NBundleTask   =
       taskKey[Seq[File]]("The i18n bundle generation task.")
-    val i18nBreakOnMissingKeys =
+    val i18nBreakOnMissingKeys   =
       settingKey[Boolean]("Option to break generation task on missing keys in configuration.")
+    val i18nOptionalReturnValues =
+      settingKey[Boolean]("Option to change return type to Option[String].")
 
   }
 
@@ -37,15 +39,17 @@ object SbtI18nPlugin extends AutoPlugin {
             i18nSource.value,
             sourceManaged.value / "sbt-i18n",
             i18nBundlePackageName.value,
-            i18nBreakOnMissingKeys.value
+            i18nBreakOnMissingKeys.value,
+            i18nOptionalReturnValues.value
           ),
           packageSrc / mappings ++= managedSources.value pair (Path
             .relativeTo(sourceManaged.value) | Path.flat),
           sourceGenerators += generateI18NBundleTask.taskValue
         )
     ) ++ Seq(
-      i18nBundlePackageName  := "org.example.i18n",
-      i18nBreakOnMissingKeys := false,
+      i18nBundlePackageName    := "org.example.i18n",
+      i18nBreakOnMissingKeys   := false,
+      i18nOptionalReturnValues := false,
       libraryDependencies ++= Seq(
         "com.ibm.icu" % "icu4j" % "76.1"
       )
@@ -56,7 +60,8 @@ object SbtI18nPlugin extends AutoPlugin {
       srcDir: sbt.File,
       outDir: File,
       packageName: String,
-      breakOnMissingKeys: Boolean
+      breakOnMissingKeys: Boolean,
+      optionalReturnValues: Boolean
   ): Seq[File] = {
 
     def parseSourceFile(f: File) =
@@ -78,7 +83,10 @@ object SbtI18nPlugin extends AutoPlugin {
         }
 
     if (!fullConfig.isEmpty) {
-      IO.write(bundleFile, BundleEmitter(fullConfig, packageName, breakOnMissingKeys).emit())
+      IO.write(
+        bundleFile,
+        BundleEmitter(fullConfig, packageName, breakOnMissingKeys, optionalReturnValues).emit()
+      )
       Seq(bundleFile)
     } else
       Seq.empty
