@@ -2,9 +2,9 @@ pull_request_rules:
   - name: Automatic merge of scala-steward PR
     conditions:
       - author=scala-steward
-      - check-success=test (8, 1.2.8)
-      - check-success=test (8)
       - check-success=test (11)
+      - check-success=test (17)
+      - check-success=test (21)
     actions:
       merge:
         method: merge
