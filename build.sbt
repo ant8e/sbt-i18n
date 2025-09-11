@@ -40,7 +40,7 @@ scalaVersion := "2.12.18"
 
 sbtPlugin := true
 
-libraryDependencies += "com.typesafe"     % "config"    % "1.4.4"
+libraryDependencies += "com.typesafe"     % "config"    % "1.4.5"
 libraryDependencies += "com.ibm.icu"      % "icu4j"     % "77.1"
 libraryDependencies += "com.google.guava" % "guava"     % "33.4.8-jre"
 libraryDependencies += "org.scalactic"   %% "scalactic" % "3.2.17" % "test"
