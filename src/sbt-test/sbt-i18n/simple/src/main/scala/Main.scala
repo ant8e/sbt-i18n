@@ -7,6 +7,7 @@ class Main {
   val text2 = tech.ant8e.i18n.Bundle.fr.test2("hi")
   val text3 = tech.ant8e.i18n.Bundle.fr.test3(java.time.ZonedDateTime.now())
   val text4 = tech.ant8e.i18n.Bundle.fr.sub.test4
+  val text5 = tech.ant8e.i18n.Bundle.fr.test5(true, java.time.ZonedDateTime.now())
 }
 
 object Main {

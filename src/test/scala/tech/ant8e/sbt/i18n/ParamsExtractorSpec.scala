@@ -87,6 +87,21 @@ class ParamsExtractorSpec
       (
         "{gender, select, male {He uses} female {She uses} other {They use}}",
         List(Param("gender", EnumParam("gender", List("male", "female", "other"))))
+      ),
+      (
+        "{isToday, select, true {Today} other {{date, date, ::MMM d}}}",
+        List(
+          Param("isToday", BooleanParam),
+          Param("date", DateParam)
+        )
+      ),
+      (
+        "{enabled, select, true {on} false {off} other {unknown}}",
+        List(Param("enabled", BooleanParam))
+      ),
+      (
+        "{hidden, select, false {shown} other {hidden}}",
+        List(Param("hidden", BooleanParam))
       )
     )
 
