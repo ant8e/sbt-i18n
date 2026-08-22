@@ -514,4 +514,35 @@ class BundleEmitterSpec extends AnyFlatSpec with Matchers {
     BundleEmitter(config, packageName).emitValues("en") should be(expected)
 
   }
+
+  it must "emit a Boolean for a select on true/false" in {
+    import BundleEmitter.quote
+    val message      =
+      "{isToday, select, true {Today} other {{date, date, ::MMM d}}}"
+    val configString =
+      s"""
+        |en {
+        |    day = "$message"
+        |}
+        |""".stripMargin
+
+    val config   = ConfigFactory.parseString(configString.stripMargin)
+    val emitter  = BundleEmitter(config, packageName)
+    val expected =
+      """abstract class I18N {
+        |protected val locale: Locale
+        |def day(isToday: Boolean, date: ZonedDateTime): String
+        |}""".stripMargin
+
+    emitter.emitStructure() should be(expected)
+    emitter.emitValues("en") should be(
+      s"""object en extends I18N {
+        |override protected val locale: Locale = Locale.forLanguageTag("en")
+        |
+        |def day(isToday: Boolean, date: ZonedDateTime): String = new MessageFormat(${quote(
+          message
+        )}, locale).format(java.util.Map.of("isToday", isToday, "date", toCalendar(date)))
+        |}""".stripMargin
+    )
+  }
 }

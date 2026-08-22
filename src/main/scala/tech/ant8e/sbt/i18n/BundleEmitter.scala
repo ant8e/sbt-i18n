@@ -87,6 +87,7 @@ case class BundleEmitter(
   private def toScalaType(paramType: ParamType) =
     paramType match {
       case AnyParam     => "Any"
+      case BooleanParam => "Boolean"
       case DateParam    => "ZonedDateTime"
       case DoubleParam  => "Double"
       case LongParam    => "Long"
@@ -348,6 +349,7 @@ private[i18n] object BundleEmitter {
 
     sealed trait ParamType
     case object AnyParam                                       extends ParamType
+    case object BooleanParam                                   extends ParamType
     case object DateParam                                      extends ParamType
     case object DoubleParam                                    extends ParamType
     case object LongParam                                      extends ParamType
@@ -437,9 +439,10 @@ private[i18n] object BundleEmitter {
           val format = mf.getFormats.head
           javaTextFormatToParamType(format)
         case MessagePattern.ArgType.SELECT                               =>
-          // Build enum with all values
           val variants = node.getComplexStyle.getVariants.asScala.toList.map(_.getSelector)
-          EnumParam(node.getName, variants)
+          // A select on true/false is a Boolean, not an enum ('true' is not a valid Scala identifier anyway)
+          if (isBooleanSelect(variants)) BooleanParam
+          else EnumParam(node.getName, variants) // Build enum with all values
         case _                                                           =>
           // For plural, selectordinal and choice check variant selectors and select between long and double
           val allVariantsInteger =
@@ -449,6 +452,13 @@ private[i18n] object BundleEmitter {
           if (allVariantsInteger) LongParam else DoubleParam
 
       }
+
+    private val booleanSelectors = Set("true", "false")
+
+    private def isBooleanSelect(variants: List[String]): Boolean = {
+      val selectors = variants.toSet - "other"
+      selectors.nonEmpty && selectors.subsetOf(booleanSelectors)
+    }
 
     // extract child messages to put to the loop queue
     private def getNext(node: ArgNode): List[PatternNode] =
