@@ -11,3 +11,5 @@ project/target
 bin
 .idea/
 .bsp/
+.metals/
+.vscode/
