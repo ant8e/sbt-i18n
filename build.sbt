@@ -27,19 +27,12 @@ ThisBuild / licenses := List(
 
 ThisBuild / homepage := Some(url("https://github.com/ant8e/sbt-i18n"))
 
-// Remove all additional repository other than Maven Central from POM
-//ThisBuild / pomIncludeRepository := { _ => false }
-//ThisBuild / publishTo            := {
-//  val nexus = "https://s01.oss.sonatype.org/"
-//  if (isSnapshot.value) Some("snapshots" at nexus + "content/repositories/snapshots")
-//  else Some("releases" at nexus + "service/local/staging/deploy/maven2")
-//}
 ThisBuild / sonatypeCredentialHost := "central.sonatype.com"
 ThisBuild / publishTo              := sonatypePublishToBundle.value
 ThisBuild / publishMavenStyle      := true
 ThisBuild / versionScheme          := Some("early-semver")
 
-scalaVersion := "2.12.18"
+scalaVersion := "2.12.21"
 
 sbtPlugin := true
 
