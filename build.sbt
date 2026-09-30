@@ -38,7 +38,7 @@ sbtPlugin := true
 
 libraryDependencies += "com.typesafe"     % "config"    % "1.4.9"
 libraryDependencies += "com.ibm.icu"      % "icu4j"     % "78.3"
-libraryDependencies += "com.google.guava" % "guava"     % "33.7.1-jre"
+libraryDependencies += "com.google.guava" % "guava"     % "33.7.2-jre"
 libraryDependencies += "org.scalactic"   %% "scalactic" % "3.2.20" % "test"
 libraryDependencies += "org.scalatest"   %% "scalatest" % "3.2.20" % "test"
 
