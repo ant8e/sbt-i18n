@@ -51,7 +51,7 @@ object SbtI18nPlugin extends AutoPlugin {
       i18nBreakOnMissingKeys   := false,
       i18nOptionalReturnValues := false,
       libraryDependencies ++= Seq(
-        "com.ibm.icu" % "icu4j" % "78.3"
+        "com.ibm.icu" % "icu4j" % "79.1"
       )
     )
 
